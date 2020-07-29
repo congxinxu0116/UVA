@@ -1,0 +1,301 @@
+---
+output: pdf_document
+---
+
+
+\begin{titlepage} % Suppresses headers and footers on the title page
+
+	\centering % Centre everything on the title page
+	
+	\scshape % Use small caps for all text on the title page
+	
+	\vspace*{\baselineskip} % White space at the top of the page
+	
+	%------------------------------------------------
+	%	Title
+	%------------------------------------------------
+	
+	\rule{\textwidth}{1.6pt}\vspace*{-\baselineskip}\vspace*{2pt} % Thick horizontal rule
+	\rule{\textwidth}{0.4pt} % Thin horizontal rule
+	
+	\vspace{0.75\baselineskip} % Whitespace above the title
+	
+	{\LARGE STAT 6021: Project 1} 
+	
+	\vspace{0.5\baselineskip}
+	
+	{\LARGE Estimating the Price of a Diamond Based on its Characteristics} % Title
+	
+	\vspace{0.75\baselineskip} % Whitespace below the title
+	
+	\rule{\textwidth}{0.4pt}\vspace*{-\baselineskip}\vspace{3.2pt} % Thin horizontal rule
+	\rule{\textwidth}{1.6pt} % Thick horizontal rule
+	
+	\vspace{2\baselineskip} % Whitespace after the title block
+	
+
+	
+	\vspace*{3\baselineskip} % Whitespace under the subtitle
+	
+	%------------------------------------------------
+	%	Editor(s)
+	%------------------------------------------------
+	
+	Written By
+	
+	\vspace{0.5\baselineskip} % Whitespace before the editors
+	\vspace{0.5\baselineskip} % Whitespace before the editors
+	\vspace{0.5\baselineskip} % Whitespace before the editors
+	\vspace{0.5\baselineskip} % Whitespace before the editors
+	\vspace{0.5\baselineskip} % Whitespace before the editors
+	\vspace{0.5\baselineskip} % Whitespace before the editors
+	
+	
+	{\scshape\Large Ashley Scurlock \\ Cory Clayton \\ Congxin (David) Xu \\ Yibo Wang \\} % Editor list
+	
+	\vspace{0.5\baselineskip} % Whitespace 
+	
+	\vspace{0.5\baselineskip} % Whitespace 
+	\vspace{0.5\baselineskip} % Whitespace 
+	\vspace{0.5\baselineskip} % Whitespace 
+	\vspace{0.5\baselineskip} % Whitespace 
+	\vspace{0.5\baselineskip} % Whitespace
+	\vspace{0.5\baselineskip} % Whitespace 
+	\vspace{0.5\baselineskip} % Whitespace 
+	\vspace{0.5\baselineskip} % Whitespace 
+	\vspace{0.5\baselineskip} % Whitespace 
+	\vspace{0.5\baselineskip} % Whitespace 
+	\vspace{0.5\baselineskip} % Whitespace
+	\vspace{0.5\baselineskip} % Whitespace 
+	\vspace{0.5\baselineskip} % Whitespace 
+	\vspace{0.5\baselineskip} % Whitespace 
+	\vspace{0.5\baselineskip} % Whitespace 
+	\vspace{0.5\baselineskip} % Whitespace 
+	\vspace{0.5\baselineskip} % Whitespace
+	\vspace{0.5\baselineskip} % Whitespace 
+	\vspace{0.5\baselineskip} % Whitespace 
+	\vspace{0.5\baselineskip} % Whitespace 
+	\vspace{0.5\baselineskip} % Whitespace 
+	\vspace{0.5\baselineskip} % Whitespace 
+	\vspace{0.5\baselineskip} % Whitespace
+	\vspace{0.5\baselineskip} % Whitespace 
+	
+	\textit{University of Virginia \\ School of Data Science} 
+
+
+\end{titlepage}
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(RColorBrewer)
+library(datasets)
+library(forecast)
+library(tidyverse)
+library(MASS)
+library(leaps)
+data <- read_csv("C:\\David\\UVA\\Summer 2020\\STAT 6021\\Project 1\\clean_diamond_data.csv")
+```
+# Executive Summary
+\large The main goal of this project is to accurately predict the price of a diamond based on its characteristics and discover meaningful relationships between the price of a diamond and the property of a diamond. We use the data from more than 210,000 different diamonds sold on *bluenile.com* and apply 3 different statistical techniques to build the best model that predict the price of a diamond. The characteristics of the diamonds include its weight, clarity, color and style. We randomly select 75% of the data as the training data to build different models and use the rest 25% of the data as the testing data to validate our model and compare our prediction accuracy. In the meantime, we also explored the relationships between the characteristics of a diamond and its price. After reading our report, we hope that customers who wish to purchase diamonds will have a better understanding about why certain diamonds are more expensive than others and they can have an estimate of what kind of diamonds they are likely to get given their budget.
+\newline
+\newline
+We build 3 different models to predict the price of a diamond. The first model is a simple linear regression model where we only use the weight to predict the price of a diamond. The second model is a multiple linear regression model where we take all the characteristics of the diamond into consideration. Our final model is based on our second model and we studied the effect of interaction terms. 
+
+\newpage 
+# Exploratory Data Analysis
+Within our exploratory data analysis, we first perform a preliminary analysis on 100% of the diamond data. We begin with a preview of the first 6 lines of the data, followed by a summary statistics table.
+```{r Preview, echo = FALSE, comment=""}
+head(data)
+summary(data)
+```
+From the two tables above, we can see we have 2 numeric variable "carat" and "price" and 3 categorical variable "clarity", "color" and "cut". The price of the diamonds will be the response variable for the project and the rest of the variables will be candidates of predictors in our models. For our two numeric variables, we can see that "carat" ranges from 0.23 to 20.45 with mean = 0.7621. "price" ranges from 229 to 2,317,596 with mean = 5540. Without doing any additional calculation or visualization, we can already expect to see some outliers on the right side of the 3rd quartile for "carat" and "price". 
+\newline
+\newline
+To further explore this dataset, we create 3 scatterplot of "price" against "carat" by "clarity", by "color" and by "cut." 
+
+```{r, echo = FALSE, out.width="60%", fig.align = 'center', warning=FALSE}
+data$clarity <-
+  factor(
+    data$clarity,
+    level = c('SI1', 'SI2', 'VS1', 'VS2', 'VVS1', 'VVS2', 'IF', 'FL'),
+    label = c('SI1', 'SI2', 'VS1', 'VS2', 'VVS1', 'VVS2', 'IF', 'FL')
+  )
+
+ggplot(data = data) +
+  geom_point(aes(x = carat, y = price, color = clarity)) +
+  scale_color_brewer(palette = 'Spectral') +
+  ggtitle("Scatter Plot of Price vs. Carat, by Clarity")
+```
+
+```{r, echo = FALSE, out.width="60%", fig.align = 'center', warning=FALSE}
+data$cut <-
+  factor(
+    data$cut,
+    level = c('Good', 'Very Good', 'Ideal', 'Astor Ideal'),
+    label = c('Good', 'Very Good', 'Ideal', 'Astor Ideal')
+  )
+
+ggplot(data = data) +
+  geom_point(aes(x = carat, y = price, color = cut)) +
+  scale_color_brewer(palette = 'Spectral') +
+  ggtitle("Scatter Plot of Price vs. Carat, by Cut")
+```
+
+```{r, echo = FALSE, out.width="60%", fig.align = 'center', warning=FALSE}
+data$color <-
+  factor(
+    data$color,
+    level = c('J', 'I', 'H', 'G', 'F', 'E', 'D'),
+    label = c('J', 'I', 'H', 'G', 'F', 'E', 'D')
+  )
+
+ggplot(data = data) +
+  geom_point(aes(x = carat, y = price, color = color)) +
+  scale_color_brewer(palette='Spectral') +
+  ggtitle("Scatter Plot of Price vs. Carat, by Color")
+
+```
+All 3 scatterplots are graphed from the lowest rating of that category to the highest rating of that category. For example, based on the first scatterplot of Price against Carat by Clarity, as the clarity rating goes from "SI1" to "FL", we can clearly see that the price gradually increases as the color of the scatter goes from red to blue. The story is the same for in the third plot, as we can see that the price gradually increases as the the color of the diamonds goes from "J" to "D". However, in the second scatterplot of Price against Carat by Cut, there is no clear pattern in change of price when we move from one type of cut to another. Therefore, based on these scatterplots, we expect that price is linearly correlated with clarity and color. 
+\newline
+\newline
+In addition, we also noticed that most of our data are clustered around carat less than or equal to 2. Therefore, we also created a Density plot to further illustrate this point: 
+```{r DensityPlotCarat, echo=FALSE, out.width="60%", fig.align = 'center', warning=FALSE}
+ggplot(data, aes(carat)) +
+  geom_density() + 
+  ggtitle("Density Plot by Carat") +
+  geom_vline(xintercept = 2, color = 'red')
+```
+```{r CalculatePercentOfDataLessThan2Carat, include=FALSE}
+length(which(data$carat < 2))/nrow(data)
+rm(data)
+gc()
+```
+Based on the density plot and additional calculation in R, we found that approximately 94% of the diamonds in our data weight less than or equal to 2 carats. In order to build a model with more prediction power, we as a group decide to remove all the data points with carat greater than 2. 
+
+
+# Detailed Analysis
+For this project, we first randomly split our data into a training dataset with 75% of the original data and a testing dataset with the rest of 25% of the data. The main purpose of doing this is to prevent overfitting and generate a out of sample accuracy metrics so that we can compare the forecast accuracy among different models.
+\newline
+\newline
+
+## Simple Linear Regression
+The first sets of models we tried are simple linear regression models. 
+
+
+```{r, include=FALSE}
+data <- read.csv('clean_diamond_data_train.csv')
+attach(data)
+```
+
+```{r, echo=FALSE, comment=""}
+results <- lm(price ~ carat)
+summary(results)
+
+```
+```{r, echo = FALSE, out.width="60%", fig.align = 'center', warning=FALSE}
+plot(carat,price, main="Untransformed Scatterplot")
+abline(results,col="red")
+```
+```{r, echo = FALSE, out.width="60%", fig.align = 'center', warning=FALSE}
+plot(results$fitted.values,results$residuals, main="Untransformed Plot of residuals against fits")
+abline(h=0,col="red")
+```
+```{r, echo = FALSE, out.width="60%", fig.align = 'center', warning=FALSE}
+boxplot(carat, main = 'With outliers')
+# boxplot.stats(carat)
+
+subgroup = subset(data, carat < 2)
+set.seed(42)
+rows <- sample(nrow(subgroup))
+data.r <- subgroup[rows,]
+```
+After restricting the data to only diamonds smaller than 2 carats, we can see that there is a clear positive correlation between price and carat of the diamond, but it does not look linear, the variance also is increasing as the carat gets bigger suggesting we should transform the response first, then the predictor.
+```{r, include=FALSE}
+detach(data)
+
+rm(results, rows)
+gc()
+
+attach(data.r)
+
+```
+
+```{r, echo=FALSE, comment=""}
+reduced <- lm(subgroup$price ~ subgroup$carat)
+summary(reduced)
+```
+
+```{r, echo = FALSE, out.width="60%", fig.align = 'center', warning=FALSE}
+plot(subgroup$carat, subgroup$price, main = "Untransformed Scatterplot")
+abline(reduced, col = "red")
+```
+
+```{r, echo = FALSE, out.width="60%", fig.align = 'center', warning=FALSE}
+plot(reduced$fitted.values, reduced$residuals, main = "Untransformed Plot of residuals against fits")
+abline(h = 0, col = "red")
+```
+
+```{r, echo = FALSE, out.width="60%", fig.align = 'center', warning=FALSE}
+bc <- as.data.frame(boxcox(reduced, lambda = seq(0.15, 0.175, 0.0001)))
+lambda <- bc$x[which(bc$y == max(bc$y))] 
+```
+The Box Cox pot gave a value of lambda close to 0, so a log transformation of the response was appropriate. This greatly improved the $R^2$ going from 0.79 in the untransformed model to 0.89. The scatterplot looks much better, but still doesn't align at the end, and on the residual plot, the variance looks constant, but doesn't have a mean value of 0 for the entire suggesting a transformation of the predictor would help.
+
+```{r, echo=FALSE, comment=""}
+reduced.log <- lm(log(price) ~ carat)
+summary(reduced.log)
+```
+
+```{r, echo = FALSE, out.width="60%", fig.align = 'center', warning=FALSE}
+plot(carat, log(price), main = "Transformed log(y) Scatterplot")
+abline(reduced.log, col = "red")
+```
+
+```{r, echo = FALSE, out.width="60%", fig.align = 'center', warning=FALSE}
+plot(reduced.log$fitted.values,reduced.log$residuals, main="Transformed Plot log(y) of residuals against fits")
+abline(h=0,col="red")
+```
+```{r, echo=FALSE, comment=""}
+srcarat <- sqrt(carat)
+crcarat <- carat ^ (1 / 3)
+reduced.log.sr <- lm(log(price) ~ srcarat)
+summary(reduced.log.sr)
+```
+
+
+```{r, echo = FALSE, out.width="60%", fig.align = 'center', warning=FALSE}
+plot(srcarat,log(price), main="Transformed log(y) and sqrt(x) Scatterplot")
+abline(reduced.log.sr,col="red")
+```
+
+```{r, echo = FALSE, out.width="60%", fig.align = 'center', warning=FALSE}
+plot(reduced.log.sr$fitted.values,reduced.log.sr$residuals, main="Transformed log(y) and sr(x) Plot of residuals against fits")
+abline(h=0,col="red")
+```
+After trying a couple different options, the cuberoot of the carat of the diamond gave best looking scatterplot and residual plot. It also improved the R^2 to 0.933 and the residuals look to have a constant variance and mean of 0.
+
+```{r, echo=FALSE, comment=""}
+reduced.log.cr<-lm(log(price)~crcarat)
+summary(reduced.log.cr)
+```
+
+```{r, echo = FALSE, out.width="60%", fig.align = 'center', warning=FALSE}
+plot(crcarat,log(price), main="Transformed log(y) and cuberoot(x) Scatterplot")
+abline(reduced.log.cr,col="red")
+```
+
+```{r, echo = FALSE, out.width="60%", fig.align = 'center', warning=FALSE}
+plot(reduced.log.cr$fitted.values,reduced.log.cr$residuals, main="Transformed log(y) and cuberoot(x) Plot of residuals against fits")
+abline(h=0,col="red")
+```
+
+```{r, echo = FALSE, out.width="60%", fig.align = 'center', warning=FALSE}
+acf(reduced.log.cr$residuals, main="ACF of Residuals",ylim=c(-0.01, 0.01))
+```
+
+```{r, echo = FALSE, out.width="60%", fig.align = 'center', warning=FALSE}
+qqnorm(reduced.log.cr$residuals)
+qqline(reduced.log.cr$residuals, col="red")
+detach(data.r)
+```
+Since the data came sorted by price, there was an obvious correlation between the data. After randomizing the order of the data the ACF plot looks much better. There are still a few places with significant lag, but these are still very small values less than 0.01. The QQ Plot shows the residuals follow a normal distribution, meeting our assumptions for a linear model. 

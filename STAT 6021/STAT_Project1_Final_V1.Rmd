@@ -94,6 +94,7 @@ library(tidyverse)
 library(MASS)
 library(leaps)
 library(knitr)
+library(Metrics)
 data <- read_csv("C:\\David\\UVA\\Summer 2020\\STAT 6021\\Project 1\\clean_diamond_data.csv")
 ```
 # Executive Summary
@@ -188,11 +189,122 @@ In addition, we also noticed that most of our data are clustered around carat le
 
 # Detailed Analysis
 For this project, we first randomly split our data into a training dataset with 75% of the original data and a testing dataset with the rest of 25% of the data. The main purpose of doing this is to prevent overfitting and generate a out-of-sample accuracy metrics so that we can compare the forecast accuracy among different models. The 3 models we built are: \newline
-* Simple Linear Regression 
-* Multiple Linear Regression with categorical variables only
-* Multiple Linear Regression with interaction terms
+1. Simple Linear Regression 
+2. Multiple Linear Regression with categorical variables only
+3. Multiple Linear Regression with interaction terms
 
 ## Simple Linear Regression
+The first sets of models we tried are simple linear regression models. 
+
+```{r, include=FALSE}
+data <- read.csv('clean_diamond_data_train.csv')
+attach(data)
+rm(x)
+gc()
+
+subgroup = subset(data, carat < 2)
+set.seed(42)
+rows <- sample(nrow(subgroup))
+data.r <- subgroup[rows,]
+
+detach(data)
+
+rm(results, rows)
+gc()
+
+attach(data.r)
+```
+
+```{r, echo=FALSE, comment=""}
+reduced <- lm(subgroup$price ~ subgroup$carat)
+summary(reduced)
+```
+
+After restricting the data to only diamonds smaller than 2 carats, we can see that there is a clear positive correlation between price and carat of the diamond. Fitting a linear regression between the two variables gives us the equation $price=8943*carat-2900$ which has an $R^2$ of 0.794 and a significant coefficients for the variable carat. The standard model are reasonably good, but as we can see in the residual plot of y (upper-left) below, there is clearly a curvature pattern. The variance is also increasing as the carat gets bigger suggesting we should transform the response first, then the predictor. \newline
+
+```{r, echo=FALSE, comment=""}
+reduced.log <- lm(log(price) ~ carat)
+#summary(reduced.log)
+
+srcarat <- sqrt(carat)
+crcarat <- carat ^ (1 / 3)
+reduced.log.sr <- lm(log(price) ~ srcarat)
+#summary(reduced.log.sr)
+```
+ 
+The Box Cox transformation plot (upper-right) to help transform the response gave a value of lambda close to 0, so a log transformation of the response was appropriate. Running a linear regression with the log of the price gave the equation $log(price) = 2.691 \cdot carat + 5.673$ or it can be expressed as $price = 290.9 \cdot e^{2.691 \cdot carat}$. This model suggests that for every tenth of a carat size the diamond price increases by 31%. This model also greatly improved the $R^2$ going from 0.794 in the untransformed model to 0.893. The residual plot of $log(y)$ (bottom-left) looks much better through the bulk of the data but still doesn't align at the end. The variance looks constant, but doesn't have a mean value of 0 for the entire span of fitted values, suggesting a transformation of the predictor would be helpful.
+
+```{r, echo = FALSE, out.width='50%', fig.show = 'hold', results='hide',fig.keep='all', warning=FALSE}
+par(mfrow = c(1, 1))
+
+tmp <- function() {
+  plot(reduced$fitted.values, reduced$residuals, main = "Residual Plot of y")
+  abline(h = 0, col = "red")
+}
+tmp()
+
+boxcox(reduced)
+
+tmp <- function() {
+  plot(reduced.log$fitted.values, reduced.log$residuals, main = "Residuals plot of log(y)")
+  abline(h = 0, col = "red")
+}
+tmp()
+```
+
+After trying a couple different options, the cubic root of the carat of the diamond gave best looking scatterplot and residual plot. It also improved the $R^2$ to 0.933 and the residuals look to have a constant variance and mean of 0.
+
+```{r, echo=FALSE, comment=""}
+reduced.log.cr <- lm(log(price) ~ crcarat)
+summary(reduced.log.cr)
+#confint(reduced.log.cr,level = 0.95)
+```
+
+```{r,  echo = FALSE, out.width='50%', fig.show = 'hold', results='hide', fig.keep='all', warning=FALSE}
+par(mfrow = c(1, 1))
+tmp <- function() {
+  plot(reduced.log.cr$fitted.values,reduced.log.cr$residuals, main="Residual Plot of log(y) and cuberoot(x)")
+  abline(h=0,col="red")
+}
+tmp()
+
+acf(reduced.log.cr$residuals,
+    main = "ACF of Residuals",
+    ylim = c(-0.01, 0.01))
+tmp <- function() {
+  qqnorm(reduced.log.cr$residuals)
+  qqline(reduced.log.cr$residuals, col = "red")
+}
+tmp()
+
+detach(data.r)
+```
+
+```{r, echo = FALSE, out.width="60%", fig.align = 'center', warning=FALSE}
+
+# #BIC(reduced.log.cr)
+# #AIC(reduced.log.cr)
+# data.r$logPrice<-log(price)
+# data.r$crcarat<-carat^(1/3)
+# # build model
+# model <- lm(logPrice~crcarat, data= data.r)
+# 
+# # Training RMSE ----
+# #forecast::accuracy(model) # visually look for RMSE
+# 
+# test$logPrice<-log(test$price)
+# test$crcarat<-test$carat^(1/3)
+# Testing RMSE ----
+# pred is a vector of prediction
+#pred <- predict.lm(model, newdata = test)
+#rmse(test$logPrice,pred)
+
+#BIC 19274.77
+#AIC 19245.02
+#RMSE  0.258073
+```
+Since the data came sorted by price, there was an obvious correlation between the data. After randomizing the order of the data the ACF plot looks much better. There are still a few places with significant lag, but these are still very small values less than 0.01. The QQ plot shows the residuals follow a normal distribution, meeting our assumptions for a linear model. 
+The Final linear model ended at $$log(price)=6.6346 \cdot \sqrt[3]{carat} + 1.8482$$ or $$price = 6.3486 \cdot e^{6.6346*\sqrt[3]{carat}}$$ This model accounts for 93.3% of the variance in the data and gives a great fit for the data for only considering one variable. The 95% interval for the coefficient of the carat (6.6255,6.6436) and (1.8406,1.8559) for the intercept, both of which indicate a high level of certainty in the model. 
 
 ## Multiple Linear Regression (with only categorical variables) 
 The second model we build uses multiple linear regression along with the categorical variables in the dataset. First, we started fitting with price as the response variable and all the other variables as the predictor variables.

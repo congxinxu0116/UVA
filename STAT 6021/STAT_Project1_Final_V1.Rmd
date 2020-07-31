@@ -95,28 +95,21 @@ library(MASS)
 library(leaps)
 library(knitr)
 library(Metrics)
-data <- read_csv("C:\\David\\UVA\\Summer 2020\\STAT 6021\\Project 1\\clean_diamond_data.csv")
+#data <- read_csv("C:\\David\\UVA\\Summer 2020\\STAT 6021\\Project 1\\clean_diamond_data.csv")
+data <- read_csv("clean_diamond_data.csv")
 ```
 # Executive Summary
 \large 
-Diamonds are precious and they are the ideal gifts for our loved ones. However, many people had spent way more than they should on purchasing diamonds. We want to build a model that estimate the price of a diamond, so that people can develop a reasonable budget based on their requirements of the diamond. The main goal of this project is to accurately predict the price of a diamond based on its characteristics. We used the data from more than 210,000 different diamonds sold on *bluenile.com*. The characteristics of the diamonds include the weight, clarity, color and style. In order to find the best model, we applied 3 different statistical techniques and built 3 candidate models. At the end, we calculated forecast accuracy metrics for all 3 models and selected the best model with the largest prediction power.  \newline
+Diamonds are precious and they are the ideal gifts for our loved ones. However, many people had spent way more than they should on purchasing diamonds. We want to build a model that estimates the price of a diamond, so that people can develop a reasonable budget based on their requirements of the diamond. The main goal of this project is to accurately predict the price of a diamond based on its characteristics. We used the data from more than 210,000 different diamonds sold on *bluenile.com*. The characteristics of the diamonds include the weight, clarity, color and style. In order to find the best model, we applied 3 different statistical techniques and built 3 candidate models. At the end, we calculated forecast accuracy metrics for all 3 models and selected the best model with the largest prediction power.  \newline
 
 
-We began with an exploratory data analysis where we studied the patterns and distribution of the data. Based on the scatterplot we drew, we can visually see that as the clarity and color of diamonds become better. the price of diamonds is very likely to increase. However, there is no clear relationship between the price and the way how diamonds are cut. In addition, we also found that more than 94% of our data weight less than 2 carats. To maintain the validity of our models, we decided to remove all data points with weight greater than or equal to 2 carats and build models only on data with weight less than 2 carats. In addition, we randomly selected 75% of the data as the training data to build the models and used the rest 25% of the data as the testing data to validate our model. This is a common practice in the data science field to further ensure the validity of our model. \newline
+We began with an exploratory data analysis where we studied the patterns and distribution of the data. Based on the scatterplots we drew, we can visually see that as the clarity and color of diamonds become better, the price of diamonds is very likely to increase. However, there is no clear relationship between the price and the way how diamonds are cut. In addition, we also found that more than 94% of our data weight less than 2 carats. To maintain the validity of our models, we decided to remove all data points with weight greater than or equal to 2 carats and build models only on data with weight less than 2 carats. In addition, we randomly selected 75% of the data as the training data to build the models and used the rest 25% of the data as the testing data to validate our model. This is a common practice in the data science field to further ensure the validity of our model. \newline
 
 
-We build 3 different models to predict the price of a diamond. The first model is a simple linear regression model where we only use the weight to predict the price of a diamond. The second model is a multiple linear regression model where we take all the characteristics of the diamond into consideration. Our final model is based on our second model and we studied the effect of interaction terms. After comparing the forecast accuracy metrics of each model, the best model is: \newline
-$$
-\begin{aligned}
-log(price) &= 6.830423(\beta_{carat})^{1/3} -0.226630\beta_{clarityIF} -0.573925 \beta_{claritySI1} \\
-&- 0.714277\beta_{claritySI2} -0.413591\beta_{clarityVS1} - 0.466890 \beta_{clarityVS2}\\ 
-&- 0.301286\beta_{clarityVVS1} - 0.365513 \beta_{clarityVVS2} - 0.063282\beta_{colorE}  \\
-&- 0.088755\beta_{colorF} -0.142225\beta_{colorG} - 0.198601\beta_{colorH}\\ 
-&- 0.297845\beta_{colorI} -0.420041\beta_{colorJ}-0.284020\beta_{cutGood}\\ &-0.093465\beta_{cutIdeal}-0.246152\beta_{cutVery Good} + 2.436036
-\end{aligned}
-$$
-\newline
-After reading our report, we hope that customers who wish to purchase diamonds will have a better understanding about the estimated of price of a diamonds based on its characteristics and they can refer to our price estimate to find the best time to make that purchase.
+We built 3 different models to predict the price of a diamond. The first model is a simple linear regression model where we only used the weight to predict the price of a diamond. The second model is a multiple linear regression model where we took all the characteristics of the diamond into consideration including its clarity, cut and color. Our final model is based on top of our second model and we studied the effect of interaction terms to see if any of the variables will affect each other while estimating the price a diamond. After comparing the forecast accuracy metrics of each model, we found that the best model is our final model using multiple linear regressions with interaction effect. It helped explain approximately 97% of the price variations of the diamonds. \newline
+
+
+After reading our report, we hope that customers who wish to purchase diamonds will have a better understanding about the estimated of price of a diamonds based on its characteristics and they can refer to our price estimate to see if the diamonds they want are within their budget. 
 
 # Exploratory Data Analysis
 Within our exploratory data analysis, we first perform a preliminary analysis on 100% of the diamond data. We begin with a preview of the first 6 lines of the data, followed by a summary statistics table.
@@ -129,18 +122,18 @@ kable(x, caption = 'Data Preview')
 kable(summary(data[,c(1,5)]), caption = 'Summary Statistics') 
 
 ```
-From the results in Table 1, we can see that we have 2 numeric variables "carat" and "price" and 3 categorical variable "clarity", "color" and "cut". The price of the diamonds will be the response variable for the project and the rest of the variables will be candidates of predictors in our models. Based on the summary statistics in Table 2, we can see that "carat" ranges from 0.23 to 20.45 with mean = 0.7621 and 3rd quartile = 1. "price" ranges from 229 to 2,317,596 with mean = 5540. Without doing any additional calculations or visualizations, we can expect to see some outliers with high values of the 3rd quartile for "carat" and "price". This will likely to create issues and bias the coefficients in our regression analysis.
+From the results in Table 1, we can see that we have 2 numeric variables "carat" and "price" and 3 categorical variables "clarity", "color" and "cut". The price of the diamonds will be the response variable for the project and the rest of the variables will be candidates of predictors in our models. Based on the summary statistics in Table 2, we can see that "carat" ranges from 0.23 to 20.45 with mean = 0.7621 and 3rd quartile = 1. "price" ranges from 229 to 2,317,596 with mean = 5540. Without doing any additional calculations or visualizations, we can expect to see some outliers with high values much larger than the 3rd quartile for "carat" and "price". This will likely create issues and bias the coefficients in our regression analysis.
 \newline
 \newline
-To further explore patterns and distributions within this dataset, we create 3 scatterplot of "price" against "carat" by "clarity", by "color" and by "cut." 
+To further explore patterns and distributions within this dataset, we create 3 scatter plot of "price" against "carat" by "clarity", by "color" and by "cut." 
 
 ```{r, echo = FALSE, out.width='50%', fig.show = 'hold', results='hide',fig.keep='all', warning=FALSE}
 # Scatter Plot of Price vs. Carat, by Clarity
 data$clarity <-
   factor(
     data$clarity,
-    level = c('SI1', 'SI2', 'VS1', 'VS2', 'VVS1', 'VVS2', 'IF', 'FL'),
-    label = c('SI1', 'SI2', 'VS1', 'VS2', 'VVS1', 'VVS2', 'IF', 'FL')
+    level = c('SI2', 'SI1', 'VS2', 'VS1', 'VVS2', 'VVS1', 'IF', 'FL'),
+    label = c('SI2', 'SI1', 'VS2', 'VS1', 'VVS2', 'VVS1', 'IF', 'FL')
   )
 
 ggplot(data = data) +
@@ -181,17 +174,18 @@ ggplot(data, aes(carat)) +
   geom_vline(xintercept = 2, color = 'red')
 ```
 
-All 3 scatterplots are graphed from the lowest rating of that category to the highest rating of that category. The first scatterplot (upper-left) of Price against Carat by Clarity shows that as the clarity rating goes from "SI1" to "FL", the price gradually increases as the color of the data points change from red to blue. The story is the same for in the third scatterplot (bottom-left) of Price against Carat by Color, as we can see that the price gradually increases as the the color of the diamond goes from "J" to "D". However, in the second scatterplot (upper-right) of Price against Carat by Cut, there is no clear pattern in change of price when we move from one type of cut to another. Therefore, based on these scatterplots, we expect that clarity and color are positively correlated with price. 
+All 3 scatter plots are graphed from the lowest rating of that category to the highest rating of that category. The first scatter plot (upper-left) of Price against Carat by Clarity shows that as the clarity rating goes from "SI2" to "FL", the price gradually increases as the color of the data points change from red to blue. The story is the same for in the third scatter plot (bottom-left) of Price against Carat by Color, as we can see that the price gradually increases as the the color of the diamond goes from "J" to "D". However, in the second scatter plot (upper-right) of Price against Carat by Cut, there is no clear pattern in change of price when we move from one type of cut to another. Therefore, based on these scatter plots, we expect that clarity and color are positively correlated with price. 
 \newline
 \newline
-In addition, we also noticed that most of our data are clustered around carat less than or equal to 2. Therefore, we also created a Density plot where we see on the bottom-right corner of the figure. The red line in the graph is a cut-off point where carat equals to 2. Based on the density plot and additional calculation in R, we found that approximately 94% of the diamonds in our data weight less than 2 carats. From an consumer perspective, ordinary people normally are not likely to look for diamonds with weight more than 2 carats. People who actually want diamonds with more than 2 carats are very likely do not care for the price of such diamonds. Therefore, in order to build a model with more prediction power, we, as a group, decide to remove all the data points with carat greater than or equal to 2. 
+In addition, we also noticed that most of our data are clustered around carat equal to 2. Therefore, we also created a Density plot (bottom-right) to visualize the distribution of the data by carat. The red line in the graph is a cut-off point where carat equals to 2. Based on the density plot and additional calculation in R, we found that approximately 94% of the diamonds in our data weight less than 2 carats. From an consumer perspective, people normally are not likely to look for diamonds with weight more than 2 carats. People who actually want diamonds with more than 2 carats are very likely do not care for the price of such diamonds. Therefore, in order to build a model with more prediction power, we, as a group, decide to remove all the data points with carat greater than or equal to 2. 
 
 
 # Detailed Analysis
-For this project, we first randomly split our data into a training dataset with 75% of the original data and a testing dataset with the rest of 25% of the data. The main purpose of doing this is to prevent overfitting and generate a out-of-sample accuracy metrics so that we can compare the forecast accuracy among different models. The 3 models we built are: \newline
-1. Simple Linear Regression 
-2. Multiple Linear Regression with categorical variables only
-3. Multiple Linear Regression with interaction terms
+For this project, we first randomly split our data into a training dataset with 75% of the original data and a testing dataset with the rest of 25% of the data. The main purpose of doing this is to prevent overfitting and to generate a out-of-sample accuracy metrics, so that we can compare the forecast accuracy among different models. The 3 models we built are: 
+
+- Simple Linear Regression
+- Multiple Linear Regression with categorical variables only
+- Multiple Linear Regression with interaction terms
 
 ## Simple Linear Regression
 The first sets of models we tried are simple linear regression models. 
@@ -220,7 +214,7 @@ reduced <- lm(subgroup$price ~ subgroup$carat)
 summary(reduced)
 ```
 
-After restricting the data to only diamonds smaller than 2 carats, we can see that there is a clear positive correlation between price and carat of the diamond. Fitting a linear regression between the two variables gives us the equation $price=8943*carat-2900$ which has an $R^2$ of 0.794 and a significant coefficients for the variable carat. The standard model are reasonably good, but as we can see in the residual plot of y (upper-left) below, there is clearly a curvature pattern. The variance is also increasing as the carat gets bigger suggesting we should transform the response first, then the predictor. \newline
+After restricting the data to only diamonds smaller than 2 carats, we can see that there is a clear positive correlation between price and carat of the diamond. Fitting a linear regression between the two variables gives us the equation $price=8943*carat-2900$ which has an $R^2$ of 0.794 and a significant coefficients for the variable carat. The standard model is reasonably good, but as we can see in the residual plot of y (upper-left) below, there is clearly a curvature pattern. The variance is also increasing as the carat gets bigger suggesting we should transform the response first, then the predictor. \newline
 
 ```{r, echo=FALSE, comment=""}
 reduced.log <- lm(log(price) ~ carat)
@@ -252,7 +246,7 @@ tmp <- function() {
 tmp()
 ```
 
-After trying a couple different options, the cubic root of the carat of the diamond gave best looking scatterplot and residual plot. It also improved the $R^2$ to 0.933 and the residuals look to have a constant variance and mean of 0.
+After trying a couple different options, the cubic root of the carat of the diamond gave best looking scatter plot and residual plot. It also improved the $R^2$ to 0.933 and the residuals look to have a constant variance and mean of 0.
 
 ```{r, echo=FALSE, comment=""}
 reduced.log.cr <- lm(log(price) ~ crcarat)
@@ -303,11 +297,12 @@ detach(data.r)
 #AIC 19245.02
 #RMSE  0.258073
 ```
-Since the data came sorted by price, there was an obvious correlation between the data. After randomizing the order of the data the ACF plot looks much better. There are still a few places with significant lag, but these are still very small values less than 0.01. The QQ plot shows the residuals follow a normal distribution, meeting our assumptions for a linear model. 
-The Final linear model ended at $$log(price)=6.6346 \cdot \sqrt[3]{carat} + 1.8482$$ or $$price = 6.3486 \cdot e^{6.6346*\sqrt[3]{carat}}$$ This model accounts for 93.3% of the variance in the data and gives a great fit for the data for only considering one variable. The 95% interval for the coefficient of the carat (6.6255,6.6436) and (1.8406,1.8559) for the intercept, both of which indicate a high level of certainty in the model. 
+Since the data came sorted by price, there was an obvious correlation between the data. After randomizing the order of the data the ACF plot looks much better. There are still a few places with significant lags, but these are still very small values less than 0.01. The QQ plot shows the residuals follow a normal distribution, meeting our assumptions for a linear model. 
+The Final linear model ended at $$log(price)=6.6346 \cdot \sqrt[3]{carat} + 1.8482$$ or $$price = 6.3486 \cdot e^{6.6346*\sqrt[3]{carat}}$$ This model accounts for 93.3% of the variance in the data and gives a great fit for the data for only considering one variable. The 95% interval for the coefficient of the carat (6.6255, 6.6436) and (1.8406, 1.8559) for the intercept, both of which indicate a high level of certainty in the model. 
 
 ## Multiple Linear Regression (with only categorical variables) 
-The second model we build uses multiple linear regression along with the categorical variables in the dataset. First, we started fitting with price as the response variable and all the other variables as the predictor variables.
+The second model we build uses multiple linear regression along with the categorical variables in the dataset. First, we started fitting with price as the response variable and all the other variables as the predictor variables.\newline
+
 
 ```{r}
 data <-
@@ -332,21 +327,22 @@ assumption_plot <- function(result) {
   qqline(result$residuals, col = "red")
 }
 ```
+
 ```{r, echo=FALSE, comment="",results='hide'}
 # all categories without log transformation or interactions
 result <- lm(data$price ~ ., data = data)
 summary(result)
 ```
-Based on the summary of the model specification, we see that the t test suggested that all $\beta$ terms are statistically significant. The F statistic suggested that the the response variable is linearly related with at least one predictor variable. However, the multiple $R^2$ and adjusted $R^2$ are 0.57, which suggested that only 57% of the variation can be explained by the predictor variables. Therefore, one or more assumptions of the multiple linear regression must have been violated. We used the residual plot, ACF plot and QQ plot to check whether any assumptions have been violated: 
+Based on the summary of the model specification, we see that the t test suggested that all $x$ terms are statistically significant. The F statistic suggested that the response variable is linearly related with at least one predictor variable. However, the multiple $R^2$ and adjusted $R^2$ are 0.57, which suggested that only 57% of the variation can be explained by the predictor variables. Therefore, one or more assumptions of the multiple linear regression must have been violated. We used the residual plot, ACF plot and QQ plot to check whether any assumptions have been violated: 
 
 ```{r, out.width='50%', fig.show = 'hold', results='hide',fig.keep='all', warning=FALSE}
 assumption_plot(result)
 ```
 
-It is clear that the assumptions of mean residual and constant variance and the assumption of normality are not met for this data. The ACF plot shows very big autocorrelations, but we figured it is because the data has been sorted by price. Therefore, we did a random shuffling of the rows for our next model and see if the ACF plot will have better distribution.
+It is clear that the assumptions of mean residual and constant variance and the assumption of normality are not met for this data. The ACF plot shows very big autocorrelations, but we figured it is because the data has been sorted by price. Therefore, we did a random shuffling of the rows for our next model to see if the ACF plot will have better distribution.
 \newline
 
-Based on our group exploratory data analysis and findings from SLR model, we chose to eliminate any data that have carat greater than or equal to 2. Log transformation on the response variable and cubic root transformation on "carat"" yielded the best result in a SLR setting. Therefore, we also did the same transformation on the response variable and "carat" to check whether the transformation can further improve the fit.
+Based on our group exploratory data analysis and findings from the SLR model, we chose to eliminate any data that have carat greater than or equal to 2. Log transformation on the response variable and cubic root transformation on "carat"" yielded the best result in a SLR setting. Therefore, we also did the same transformation on the response variable and "carat" to check whether the transformation can further improve the fit.
 ```{r, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide', comment=""}
 # randomize data by row
 set.seed(42)
@@ -365,37 +361,111 @@ summary(lr.cr.x)
 assumption_plot(lr.cr.x)
 ```
 
-The plots showed that the fit is improved further and all the plots, especially the residual plot and the QQ plot, now look very good. Then, we did the same calculations on the evaluation metrics of this new model. The t tests show that all terms are significant so that we don't have to consider dropping any predictor variables. The reference classes for clarity, color and cut are FL, D and Astor Ideal respectively. All slope coefficients are shown to have a p-value smaller than 0.05 so that we want to include every term in the model.
+The plots show that the fit is improved further and all the plots, especially the residual plot and the QQ plot, now look very good. Then, we did the same calculations on the evaluation metrics of this new model. The t test shows all slope coefficients have a p-value smaller than 0.05 so that we want to include every term in the model.
 \newline
 \newline
-The adjusted $R^2$ is 0.9732. The adjusted $R^2$ are better than the previous model. The adjusted $R^2$ is not significantly smaller than the $R^2$, indicating that we probably didn't overfit the model. In conclusion, this model, with log transformation on the response variable and cubic root transformation on the carat variable as well as all the categorical variables, is shown to be the best model so far. The regression equation will be 
+The adjusted $R^2$ is 0.9732. The adjusted $R^2$ is better than the previous model. The adjusted $R^2$ is not significantly smaller than the $R^2$, indicating that we probably didn't overfit the model. In conclusion, this MLR model, with log transformation on the response variable, cubic root transformation on the carat variable, and all the categorical variables, is shown to be a great model candidate for diamond price prediction. The regression equation of the model is 
 
 $$
 \begin{aligned}
-log(price) &= 6.830423(\beta_{carat})^{1/3} -0.226630\beta_{clarityIF} -0.573925 \beta_{claritySI1} \\
-&- 0.714277\beta_{claritySI2} -0.413591\beta_{clarityVS1} - 0.466890 \beta_{clarityVS2}\\ 
-&- 0.301286\beta_{clarityVVS1} - 0.365513 \beta_{clarityVVS2} - 0.063282\beta_{colorE}  \\
-&- 0.088755\beta_{colorF} -0.142225\beta_{colorG} - 0.198601\beta_{colorH}\\ 
-&- 0.297845\beta_{colorI} -0.420041\beta_{colorJ}-0.284020\beta_{cutGood}\\ &-0.093465\beta_{cutIdeal}-0.246152\beta_{cutVery Good} + 2.436036
+log(price) &= 6.830423(x_{carat})^{1/3} -0.226630x_{clarityIF} -0.573925 x_{claritySI1} \\
+&- 0.714277x_{claritySI2} -0.413591x_{clarityVS1} - 0.466890 x_{clarityVS2}\\ 
+&- 0.301286x_{clarityVVS1} - 0.365513 x_{clarityVVS2} - 0.063282x_{colorE}  \\
+&- 0.088755x_{colorF} -0.142225x_{colorG} - 0.198601x_{colorH}\\ 
+&- 0.297845x_{colorI} -0.420041x_{colorJ}-0.284020x_{cutGood}\\ 
+&-0.093465x_{cutIdeal}-0.246152x_{cutVery Good} + 2.436036
 \end{aligned}
 $$
 
 ## Multiple Linear Regression (with interaction terms)
 
-# Conclusion
-```{r}
-# Create a table of model by forecast accuracy
+Our final sets of models are multiple linear regression models with interaction terms. 
+```{r, warning=FALSE}
+dimond <- read.csv("clean_diamond_data_train.csv")
+dimond <- dimond[!(dimond$carat > 2),]
+dimond$carat <- (dimond$carat) ^ (1 / 3)
+set.seed(42)
+rows <- sample(nrow(dimond))
+dimond <- dimond[rows,]
+attach(dimond)
+clarity <- relevel(clarity, ref = "SI2") #[Ranking: SI2, SI1, VS2, VS1, VVS2, VVS1, IF, FL]
+color <- relevel(color, ref = "J") #[Ranking: J, I, H, G, F, E, D ]
+cut <- relevel(cut, ref = "Good") #[Ranking: Good, Very Good, Ideal, Astor Ideal]
+#Base Model
+model0 <- lm(log(price) ~ carat + clarity + color + cut)
+#Interaction Model
+model1 <- lm(log(price) ~ carat + clarity + color + cut + carat:clarity + carat:color)
 ```
-Based on the forecast accuracy table above, we can see that our multiple linear regression model with only categorical variables has the best root mean square error and adjusted $R^2$. Therefore, our final model recommendation for people who wants to estimate the price of a diamond based on its weight, clarity, cut and color will be: 
+
+```{r, comment=""}
+summary(model1)
+```
+Based on our results in the Simple Linear Regression section, we found that transforming the price variable into $log(price)$ and the carat variable into $\sqrt[3]{carat}$ help improve the uniformity of the residual variation. According to our findings in the Multiple Linear Regression with categorical variable section, we also know that adding all the categorical variables into SLR model also improve the model fit. After working on different combinations of interaction terms, the final model we created was a multiple linear regression model with the two interaction terms carat:clarity as well as carat:color. We will also create the residual plot, ACF plot and QQ plot to check if any of the assumptions for the multiple linear regression models are violated: 
+
+```{r, out.width='50%', fig.show = 'hold', results='hide',fig.keep='all', warning=FALSE}
+tmp <- function(){
+  plot(model1$fitted.values,
+       model1$residuals,
+       main = "Plot of Residuals against Fitted Values")
+  abline(h = 0, col = "red")
+}
+tmp()
+
+acf(model1$residuals,
+    main="ACF of Residuals After Taking ln(price) and carat^(1/3)",
+    ylim = c(-0.01, 0.01))
+
+tmp <- function(){
+  qqnorm(model1$residuals)
+  qqline(model1$residuals, col="red")
+}
+tmp()
+```
+
+We can see from the residual plot (upper-left) that there is no clear pattern of the residuals. Almost all of the lags in the ACF plot (upper-right) is within the $95\%$ confidence interval range,  where the lags are consistently between $-0.005$ and $0.005$. The QQ plot shows that there is a slight curve at the ends of the plot, but overall, the residuals follow a normal distribution, meeting our assumptions for a MLR model. \newline
+\newline
+
+In a test comparing the simple equation with every possible combination of interaction terms, the p-value in the ANOVA F test was always significantly less than $0.001$ implying that a model including interaction terms would be a better model. Then among those interaction models, we compared the AIC and BIC values of each model and found that a model including the previously stated two interaction terms is the best model with an AIC of $-120642.3$ and a BIC of $-120324.9$. This model accounts for $97.4 \%$ of the variance in the data which is overall a great fit.
+
+# Conclusion
+  
+```{r, echo = FALSE, comment=""}
+Model_Name <- c(
+  "Simple Linear Regression",
+  "MLR with Categorical Variables",
+  "MLR with Interaction Terms"
+)
+R_Sq_Adj <- c("0.9328",
+              "0.9732",
+              "0.9750")
+AIC <- c("19245",
+         "-117752",
+         "-126610")
+BIC <- c("19274",
+         "-117563",
+         "-126263")
+RMSE <- c("0.2581",
+          "0.1624",
+          "0.1585")
+
+accy <- data.frame(Model_Name, R_Sq_Adj, AIC, BIC, RMSE, stringsAsFactors = F)
+kable(accy, caption = 'Model Comparisions', align = 'lrrrr')
+```
+We carefully checked a few popular statistical measures, namely AIC, BIC, Adjusted $R^2$, and root mean squared error (RMSE), to compare the performances of each model we have investigated so far. Adjusted $R^2$ measures the percentage variance that can be explained by the model predictor variables. AIC and BIC criteria are popular statistics for model selection that measure the trade-off between model fit and complexity of the model. Root Mean Square Error (RMSE) is applied on validation data only, which is used here to access how the models perform on previously unseen data. All three models perform very well on the adjusted $R^2$ and RMSE, indicating all three can be good models for diamond price predictions. Among the three, the MLR Model with interaction terms has slightly higher adjusted $R^2$ and smaller RMSE. AIC and BIC, along with the partial F test, agree with adjusted $R^2$ and RMSE measures that our final MLR Model with interaction terms is the best model considering model complexity. Therefore, MLR Model with interaction terms is our final model that we recommend for diamond price prediction. \newline
+
+Our final model recommendation for people who wants to estimate the price of a diamond based on its weight, clarity, cut and color will be: 
 $$
 \begin{aligned}
-log(price) &= 6.830423(\beta_{carat})^{1/3} -0.226630\beta_{clarityIF} -0.573925 \beta_{claritySI1} \\
-&- 0.714277\beta_{claritySI2} -0.413591\beta_{clarityVS1} - 0.466890 \beta_{clarityVS2}\\ 
-&- 0.301286\beta_{clarityVVS1} - 0.365513 \beta_{clarityVVS2} - 0.063282\beta_{colorE}  \\
-&- 0.088755\beta_{colorF} -0.142225\beta_{colorG} - 0.198601\beta_{colorH}\\ 
-&- 0.297845\beta_{colorI} -0.420041\beta_{colorJ}-0.284020\beta_{cutGood}\\ &-0.093465\beta_{cutIdeal}-0.246152\beta_{cutVery Good} + 2.436036
+log(price) & = 6.33(x_{carat})^{1/3} + 0.96x_{clarityFL}-0.31x_{clarityIF} + 0.13x_{claritySI1} + 0.25x_{clarityVS1} \\
+           & + 0.23 x_{clarityVS2} + 0.29x_{clarityVVS1} + 0.29 x_{clarityVVS2} - 0.11x_{colorD}  - 0.13x_{colorE} \\
+           & - 0.10x_{colorF} - 0.13x_{colorG} - 0.003x_{colorH} - 0.04x_{colorJ} + 0.29x_{cutAstorIdeal} \\ 
+           & + 0.19x_{Ideal} - 0.04x_{cutVery Good} - 0.30(x_{carat})^{1/3}*x_{clarityFL} \\ 
+           & + 0.21(x_{carat})^{1/3}*x_{clarityIF} + 0.01(x_{carat})^{1/3}*x_{claritySI1} \\
+           & + 0.06(x_{carat})^{1/3}*x_{clarityVS1} + 0.03(x_{carat})^{1/3}*x_{clarityVS2} \\
+           & + 0.14(x_{carat})^{1/3}*x_{clarityVVS1} + 0.06(x_{carat})^{1/3}*x_{clarityVVS2} \\
+           & + 0.63(x_{carat})^{1/3}*x_{colorD} + 0.57(x_{carat})^{1/3}*x_{colorE} \\
+           & + 0.51(x_{carat})^{1/3}*x_{colorF} + 0.48(x_{carat})^{1/3}*x_{colorG} + 0.26(x_{carat})^{1/3}*x_{colorH} \\
+           & + 0.18(x_{carat})^{1/3}*x_{colorI} + 1.44
 \end{aligned}
 $$
-
-
 

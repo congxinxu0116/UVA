@@ -1,0 +1,782 @@
+---
+output: pdf_document
+---
+
+\begin{titlepage} % Suppresses headers and footers on the title page
+
+	\centering % Centre everything on the title page
+	
+	\scshape % Use small caps for all text on the title page
+	
+	\vspace*{\baselineskip} % White space at the top of the page
+	
+	%------------------------------------------------
+	%	Title
+	%------------------------------------------------
+	
+	\rule{\textwidth}{1.6pt}\vspace*{-\baselineskip}\vspace*{2pt} % Thick horizontal rule
+	\rule{\textwidth}{0.4pt} % Thin horizontal rule
+	
+	\vspace{0.75\baselineskip} % Whitespace above the title
+	
+	{\LARGE STAT 6021: Project 2} 
+	
+	\vspace{0.5\baselineskip}
+	
+	{\LARGE Classifying Red Wine and White Wine} % Title
+	
+	\vspace{0.75\baselineskip} % Whitespace below the title
+	
+	\rule{\textwidth}{0.4pt}\vspace*{-\baselineskip}\vspace{3.2pt} % Thin horizontal rule
+	\rule{\textwidth}{1.6pt} % Thick horizontal rule
+	
+	\vspace{2\baselineskip} % Whitespace after the title block
+	
+
+	
+	\vspace*{3\baselineskip} % Whitespace under the subtitle
+	
+	%------------------------------------------------
+	%	Editor(s)
+	%------------------------------------------------
+	
+	Written By
+	
+	\vspace{0.5\baselineskip} % Whitespace before the editors
+	\vspace{0.5\baselineskip} % Whitespace before the editors
+	\vspace{0.5\baselineskip} % Whitespace before the editors
+	\vspace{0.5\baselineskip} % Whitespace before the editors
+	\vspace{0.5\baselineskip} % Whitespace before the editors
+	\vspace{0.5\baselineskip} % Whitespace before the editors
+	
+	
+	{\scshape\Large Alex Stern \\ Drew Pearson \\ Congxin (David) Xu \\ John Zhang  \\} % Editor list
+	
+	\vspace{0.5\baselineskip} % Whitespace 
+	
+	\vspace{0.5\baselineskip} % Whitespace 
+	\vspace{0.5\baselineskip} % Whitespace 
+	\vspace{0.5\baselineskip} % Whitespace 
+	\vspace{0.5\baselineskip} % Whitespace 
+	\vspace{0.5\baselineskip} % Whitespace
+	\vspace{0.5\baselineskip} % Whitespace 
+	\vspace{0.5\baselineskip} % Whitespace 
+	\vspace{0.5\baselineskip} % Whitespace 
+	\vspace{0.5\baselineskip} % Whitespace 
+	\vspace{0.5\baselineskip} % Whitespace 
+	\vspace{0.5\baselineskip} % Whitespace
+	\vspace{0.5\baselineskip} % Whitespace 
+	\vspace{0.5\baselineskip} % Whitespace 
+	\vspace{0.5\baselineskip} % Whitespace 
+	\vspace{0.5\baselineskip} % Whitespace 
+	\vspace{0.5\baselineskip} % Whitespace 
+	\vspace{0.5\baselineskip} % Whitespace
+	\vspace{0.5\baselineskip} % Whitespace 
+	\vspace{0.5\baselineskip} % Whitespace 
+	\vspace{0.5\baselineskip} % Whitespace 
+	\vspace{0.5\baselineskip} % Whitespace 
+	\vspace{0.5\baselineskip} % Whitespace 
+	\vspace{0.5\baselineskip} % Whitespace
+	\vspace{0.5\baselineskip} % Whitespace 
+	
+	\textit{University of Virginia \\ School of Data Science} 
+
+
+\end{titlepage}
+
+## Executive Summary
+
+## Explortary Data Analysis
+
+This section provides valuable insight regarding our data sets. The datasets we used describes more than 6,000 red and white vinho verde wines from the north of Portugal. We had two data sets, 1 that describes various white wines and 1 that describes various red wines. Within each data set, there are features that describe the wines. The features include: fixed acidity, volatile acidity, citric acid, residual sugar, chlorides, free sulfur dioxide, total sulfur dioxide, density, pH, sulphates, alcohol, and quality (a score between 0-10).   
+
+With our primary goals of building a simple logistic model and building a multivariate logistic regression that can predict white or red wine, we will first, we need to familiarize ourselves with the potential predictors.  
+
+### Predictor Variables
+
+We will examine two aspect of our predictor variables:  
+
+1) How are each of the predictor variables distributed? Are they skewed? Are there any predictors that have some data points that may be outliers?   
+2) How are each of the predictor variables related to the response variable? Are there any predictors that appear to explain enough of the 
+variability in the response variable that it would be a strong predictor in a simple logistic regression. 
+
+To answer these two questions, we will look at box plots of each variable broken down by white and red wine.
+
+```{r setup, include=FALSE,echo = FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(tidyverse)
+library(ROCR)
+library(knitr)
+```
+
+```{r, echo=FALSE, include=FALSE}
+
+# from David: 
+redwine <- read_csv("wineQualityReds.csv")
+whitewine <- read_csv("wineQualityWhites.csv")
+
+# Create new variable 
+redwine$winetype <- "redwine"
+whitewine$winetype <- "whitewine"
+
+# Row Bind two datasets together
+wine <- rbind(redwine, whitewine)
+wine <- wine[,-c(1)]
+wine$winetype <- as.factor(wine$winetype)
+# names(wine)
+```
+
+```{r, echo=FALSE, out.width='100%', fig.show = 'hold', fig.align='center', results='hide',fig.keep='all', warning=FALSE}
+par(mfrow = c(2, 3))
+boxplot(wine$volatile.acidity ~ wine$winetype) # significant
+boxplot(wine$fixed.acidity ~ wine$winetype) # possibly
+boxplot(wine$citric.acid ~ wine$winetype) # not
+boxplot(wine$residual.sugar ~ wine$winetype) # significant ?
+boxplot(wine$chlorides ~ wine$winetype) # significant
+boxplot(wine$free.sulfur.dioxide ~ wine$winetype) # significant
+```
+
+
+```{r, echo=FALSE, out.width='100%', fig.show = 'hold', fig.align='center', results='hide', fig.keep='all', warning=FALSE}
+par(mfrow = c(2, 3))
+boxplot(wine$total.sulfur.dioxide ~ wine$winetype) # significant
+boxplot(wine$density ~ wine$winetype) # not
+boxplot(wine$pH ~ wine$winetype) # not
+boxplot(wine$sulphates ~ wine$winetype) # not
+boxplot(wine$alcohol ~ wine$winetype) # not
+boxplot(wine$quality ~ wine$winetype) # not
+```
+From analyzing all the box plots we learn a lot about our data set that will guide our future steps. Some important take-aways:  
+
+1) There appears to be many predictors that have clear differences between red and white wine when looking at their distribution and their medians. Thisimplies that we should be able to build an accurate logistic regression.  
+2) There appears to be a few predictors that are strong contenders to be used in a simple logistic regression and have a strong accuracy in prediction. Specifically, $volatile.acidity$, $regular.sugar$, $chlorides$, $free.sulfur.dioxide$ and $total.sulfur.dioxide$.  
+3) As expected Quality is not very good at differentiating between red and white wine. It appears that both red and white have very similar ranges of quality. It may be helpful when other variables are present, but on it's own it won't provide to be helpful in predicting red v white  
+4) All the variables seem pretty normally distributed. There does not appear to be too much skewness in any predictor. Some predictors are much more compact than other, but all are pretty normally distributed. (The one exception would be quality appears a little skewed.)  
+5) There may be a couple of outliers that we will want to check in on later as we are modeling. Looking at the boxplots for Density, residual sugar, and Free Sulfur dioxide, we can see there appears to be a white wine data point that has large values in those categories. So, we will want to keep that in mind. The other box plots have a few data points where the value of the given predictor appears abnormally large, but again, we will look into those later.
+
+### Response Variable  
+The important piece to note about the response variable is the class imbalance. There are about 1,600 red wines in the data set, but there are almost 5,000 white wines. This is something to remember as we evaluate our models. The class imbalance may cause our models to lean towards classifying to white wines, as a large majority are white. Because of the class imbalance we will need to make sure we keep track of metrics other than overall model accuracy. 
+
+
+We now can move on to our modeling phase. The exploratory data analysis will help us with that, as we now know the predictors that we can start with for
+a single variable model. This will be helpful in answering our first question, which is: Can we build a simple model with only 1 predictor that can accurately predict red vs. white wine? If so, what predictor variable is used?  After we dig into that problem, we can move onto adding predictors and we can be confident from our analysis that using multiple predictors will result in a very accurate model, which will help in the second question. 
+
+## Detailed Analysis 
+
+### Logistic Regression With Multiple Variable 
+```{r, include=FALSE}
+# Read in the data
+redwine <- read_csv("C:\\David\\UVA\\Summer 2020\\STAT 6021\\Project 2\\wineQualityReds.csv")
+whitewine <- read_csv("C:\\David\\UVA\\Summer 2020\\STAT 6021\\Project 2\\wineQualityWhites.csv")
+
+# Create new variable 
+redwine$winetype <- "redwine"
+whitewine$winetype <- "whitewine"
+
+# Row Bind two datasets together
+wine <- rbind(redwine, whitewine)
+wine <- wine[,-c(1)]
+
+# Remove unnecessary datasets
+rm(redwine, whitewine)
+gc()
+```
+The goal of this analysis to build the best classification model using the characteristics of a wine to detect whether that wine is a red wine or a white wine. To validate our model, we first randomly split our data into the training data and testing data. The training data contains 75% of the original data and the testing data has rest of 25% of the original data. Based on our exploratory data analysis above, we know that our response variable will be *winetype* and the rest of the variables are the candidate predictors for the final model. We first confirmed that our reference level for the *winetype* is **whitewine**. By looking at the Frequency Table below, we could potentially have a unbalanced sample size in two classes. We will look into this later in the study. 
+```{r Classification }
+# Convert Categorical Variable into factor
+wine$winetype <- as.factor(wine$winetype)
+
+# Random Split
+set.seed(666)
+test_rows <- sample(nrow(wine), nrow(wine) * 0.25)
+
+# Create train and test
+test <- wine[test_rows,]
+train <- wine[-test_rows,]
+
+# Confirm reference level
+kable(contrasts(wine$winetype), caption = "Reference Check Table")
+
+# Display a table to show how many white wines and red wines in each dataset
+tmp <- rbind(data.frame(t(table(train$winetype))), data.frame(t(table(test$winetype)))) 
+tmp$Var1 <- c("Train", "Train", "Test", "Test")
+colnames(tmp) <-  c("Dataset", "Wine Type", "Frequency")
+kable(tmp, caption = "Frequency Table By Dataset And Wine Type")
+
+rm(tmp)
+```
+**(1) Full Model** \newline
+The first model we built uses all the variables as predictors:
+```{r Classification Modeling, comment = ""}
+full_model <- glm(winetype ~ ., family = binomial, data = train)
+summary(full_model)
+```
+
+From the summary table above, we first performed a Likelihood Ratio test to evaluate our model adequacy: 
+$$ \Delta G^2 = \textit{null deviance - residual deviance} = 5410.78  - 255.93 = 5154.85$$
+
+We also know that $\Delta G^2$ follows a $\chi^2_{p-1}$ distribution. Therefore, we can get p-value $\approx 0 < \alpha = 0.05$. We can conclude that model is adequate in classifying different wine types. However, we can also see in the summary statistics that Wald test on individual predictors suggesting that some of the predictors are not statistically significant at $\alpha = 0.05$ level. Hence, we are going to create a partial likelihood ratio test and see if we can remove all the insignificant variables at once. \newline
+
+
+**(2) Likelihood Ratio Test on Dropping all 4 insignificant variables**
+```{r, include=FALSE}
+1 - pchisq(full_model$null.deviance - full_model$deviance, length(full_model$coefficients))
+```
+$$H_0: \beta_{fixed.acidity} = \beta_{citric.acid} = \beta_{pH} = \beta_{quality} = 0$$
+$$H_a: \textit{not all the }\beta_j \textit{ in } H_0 \textit{ equal to 0 }$$
+```{r reduced model 1, comment=""}
+reduced <- glm(
+  winetype ~ volatile.acidity + residual.sugar + chlorides + 
+    free.sulfur.dioxide + total.sulfur.dioxide + density + 
+    sulphates + alcohol,
+  family = binomial,
+  data = train
+)
+summary(reduced)
+
+# 1 - pchisq(reduced$deviance - full_model$deviance, 4)
+rm(full_model)
+```
+
+We ran a new model removing the 4 insignificant variables (*fixed.acidity*, *citric.acid*, *pH*, *quality*). Our new $\Delta G^2$ is calculated as below:
+$$ \Delta G^2 = \textit{residual deviance of reduced model - residual deviance of full model} =  262.82  - 255.93 = 6.89$$
+We can get p-value $= 0.1416907 > \alpha = 0.05$. Therefore, we failed to reject our null hypothesis and this outcome suggests that we can remove all 4 variables together. In addition, we also noticed that the AIC for our full model is 281.93 and the AIC for our reduced model is 280.82. The decrease of AIC is also evidence that our reduced model is a better model. After removing the 3 variables, all the variables that are currently in the model are all statistically significant even at the $\alpha = 0.01$ level. As a result, the equation of our final model for classifying the red wine and white wine is: 
+
+$$
+\begin{aligned}
+log(\frac{\pi}{1 - \pi}) & = 1648 - 9.71 \cdot volatile.acidity + 1.135 \cdot residual.sugar - 20.62 \cdot chlorides \\
+                         & - 0.07818 \cdot free.sulfur.dioxide + 0.06686 \cdot total.sulfur.dioxide \\
+                         & - 1639 \cdot density - 4.405 \cdot sulphates - 1.635 \cdot alcohol 
+\end{aligned}
+$$
+In this case, the predicted odds of a white wine is multiplied by $exp(\beta_j)$ for a one-unit increase in $x_j$. For example, when the alcohol increases by one-unit, the predicted odds of a white wine is going to be approximately $exp(- 1.635) = 19.49%$ of the original odds. The direction of the change also make sense to us, as we would expect that on average, red wine will contain more alcohol than white wine, holding everything else constant. \newline
+
+
+**(3) ROC, AUC and Confusion Matrix** \newline
+After finalizing our predictors, we studied how well our model perform on test data: 
+```{r, out.width='75%', fig.align='center', comment=""}
+rates <- prediction(predict(reduced, newdata = test, type = "response"), test$winetype)
+
+roc_result <- performance(rates, measure = "tpr", x.measure = "fpr")
+
+plot(roc_result, main = "ROC Curve for Wine Classification")
+lines(x = c(0, 1),
+      y = c(0, 1),
+      col = "red")
+
+auc <- performance(rates, measure = "auc")@y.values[[1]]
+print(paste("The AUC for our reduced model is", round(auc, 4)))
+```
+We can see that our ROC curve is far away from the red diagonal line and is very close to the point (0, 1). The AUC for our reduced model is 0.9925, which is also very close to 1. Both the ROC curve and the AUC value indicate that our model is very accurate. To confirm our findings, we also looked at the confusion matrix: 
+
+```{r, comment=""}
+kable(table(test$winetype, rates@predictions[[1]] > 0.5), caption = "Confusion Matrix")
+rm(rates, auc, roc_result)
+```
+
+Using a threshold of 0.5, we can see that 
+
+- Overall error rate is: $(11 + 8) / (11 + 8 + 401 + 1204) = 1.17\%$
+- False Positive rate is: $11 / (11 + 401) = 2.67\%$
+- False Negative rate is: $8 / (8 + 1204) = 0.66\%$
+- Sensitivity rate is: $1 - FNR = 99.34\%$
+- Specificity rate is: $1 - FPR = 97.33\%$
+
+Based on our findings in the ROC Curve, AUC value and different rates above, we can see that our model is performing really well in classifying the white wine and red wine based on the predictors we selected. To further validate our model and alleviate our concerns about the unbalanced training data, we are going to create a balanced training dataset and re-train our model with the variables we selected in (2) and see if ROC curve, AUC and different rates will change dramatically. \newline
+
+
+**(4) Balanced Training Data**
+
+Since we only have 1599 observations of red wine, we are going to use 1000 observations as training and the rest of 599 as testing. Therefore, our training data will also 1000 observations of white wines. 
+
+```{r}
+# Get redwine data and whitewine data for splitting
+red <- wine %>% filter(winetype == 'redwine')
+white <- wine %>% filter(winetype == 'whitewine')
+
+# Select 1000 rows from each dataset
+set.seed(666)
+train_rows_red <- sample(nrow(red), 1000)
+train_rows_white <- sample(nrow(white), 1000)
+
+# Split train and test
+train_red <- red[train_rows_red, ]
+test_red <- red[-train_rows_red, ]
+train_white <- white[train_rows_white, ]
+test_white <- white[-train_rows_white, ]
+
+# Row bind 
+test2 <- rbind(test_red, test_white)
+train2 <- rbind(train_red, train_white)
+
+# Display a table to show how many white wines and red wines in each dataset
+tmp <- rbind(data.frame(t(table(train2$winetype))), data.frame(t(table(test2$winetype)))) 
+tmp$Var1 <- c("Train", "Train", "Test", "Test")
+colnames(tmp) <-  c("Dataset", "Wine Type", "Frequency")
+kable(tmp, caption = "Frequency Table By Dataset And Wine Type")
+
+rm(test_red, test_white, train_red, train_white, train_rows_red, train_rows_white, red, white, tmp)
+```
+
+```{r, out.width='75%', fig.align='center', comment=""}
+reduced2 <- glm(
+  winetype ~ volatile.acidity + residual.sugar + chlorides + 
+    free.sulfur.dioxide + total.sulfur.dioxide + density + 
+    sulphates + alcohol,
+  family = binomial,
+  data = train2
+)
+
+rates2 <- prediction(predict(reduced2, newdata = test2, type = "response"), test2$winetype)
+
+roc_result2 <- performance(rates2, measure = "tpr", x.measure = "fpr")
+
+plot(roc_result2, main = "ROC Curve for Wine Classification")
+lines(x = c(0, 1),
+      y = c(0, 1),
+      col = "red")
+
+auc2 <- performance(rates2, measure = "auc")@y.values[[1]]
+print(paste("The AUC for our reduced model is", round(auc2, 4)))
+
+kable(table(test2$winetype, rates2@predictions[[1]] > 0.5), caption = "Confusion Matrix")
+```
+
+Using a threshold of 0.5, we can see that:
+
+- Overall error rate is: $(26 + 5) / (26 + 5 + 594 + 3872) = 0.69\%$
+- False Positive rate is: $5 / (5 + 594) = 0.83\%$
+- False Negative rate is: $26 / (26 + 3872) = 0.67\%$
+- Sensitivity rate is: $1 - FNR = 99.33\%$
+- Specificity rate is: $1 - FPR = 99.17\%$
+
+From the ROC curve, AUC value and different rates, we can see that our model actually did not deteriorate, and it became even better. We were able to get better ROC curve, higher AUC value, lower false positive rate. The false negative rate only increases by $0.01\%$. Therefore, we can conclude that we do not have to worry about the unbalanced training data and the model built in section (2) using our selected predictors is a great model in classifying white wine and red wine. 
+
+
+### Logistic Regression With Single Variable 
+
+After initial analysis of boxplot comparisons between each of the predictors and our response variable, type of wine (red or white), we identified predictors that are contenders for our single-predictor logistic regression model: *regular.sugar* *volatile.acidity*, *chlorides*, *free.sulfur.dioxide*, and *total.sulfur.dioxide*. All boxplots indicate a significant difference in values for the predictor when differentiating between the response groups, red wine and white wine.
+
+Then we built out 5 logistic regression on the *winetype* using each of the variables that showing a significant difference in red wine and white wine: 
+
+```{r, echo = FALSE, out.width='100%', fig.show = 'hold', results='hide',fig.align='center',fig.keep='all', warning=FALSE}
+par(mfrow=c(2,3))
+set.seed(199)
+sample <- sample.int(nrow(wine), floor(.50 * nrow(wine)), replace = F)
+train <- wine[sample,]
+test <- wine[-sample,]
+
+model <-
+  glm(winetype ~ residual.sugar, family = 'binomial', data = train)
+preds <- predict(model, newdata = test, type = "response")
+rates <- prediction(preds, test$winetype)
+roc_result <- performance(rates, measure = "tpr", x.measure = "fpr")
+tmp <- function() {
+  plot(roc_result, main = "Residual Sugar")
+  lines(x = c(0, 1),
+        y = c(0, 1),
+        col = "red")
+}
+tmp()
+auc <- performance(rates, measure = "auc")
+# auc@y.values[[1]]
+# 0.678
+
+
+model <-
+  glm(winetype ~ volatile.acidity,
+      family = 'binomial',
+      data = train)
+preds <- predict(model, newdata = test, type = "response")
+rates <- prediction(preds, test$winetype)
+roc_result <- performance(rates, measure = "tpr", x.measure = "fpr")
+
+tmp <- function() {
+  plot(roc_result, main = "Volatile Acidity")
+  lines(x = c(0, 1),
+        y = c(0, 1),
+        col = "red")
+}
+tmp()
+
+auc <- performance(rates, measure = "auc")
+# auc@y.values[[1]]
+# 0.903
+
+
+model <- glm(winetype ~ chlorides, family = 'binomial', data = train)
+preds <- predict(model, newdata = test, type = "response")
+rates <- prediction(preds, test$winetype)
+roc_result <- performance(rates, measure = "tpr", x.measure = "fpr")
+
+tmp <- function() {
+  plot(roc_result, main = "Chlorides")
+  lines(x = c(0, 1),
+        y = c(0, 1),
+        col = "red")
+}
+tmp()
+auc <- performance(rates, measure = "auc")
+# auc@y.values[[1]]
+# 0.950
+
+
+model <-
+  glm(winetype ~ free.sulfur.dioxide,
+      family = 'binomial',
+      data = train)
+preds <- predict(model, newdata = test, type = "response")
+rates <- prediction(preds, test$winetype)
+roc_result <- performance(rates, measure = "tpr", x.measure = "fpr")
+tmp <- function() {
+  plot(roc_result, main = "Free Sulfur Dioxide")
+  lines(x = c(0, 1),
+        y = c(0, 1),
+        col = "red")
+}
+tmp()
+
+auc <- performance(rates, measure = "auc")
+# auc@y.values[[1]]
+# 0.852
+
+
+model <-
+  glm(winetype ~ total.sulfur.dioxide,
+      family = 'binomial',
+      data = train)
+preds <- predict(model, newdata = test, type = "response")
+rates <- prediction(preds, test$winetype)
+roc_result <- performance(rates, measure = "tpr", x.measure = "fpr")
+
+tmp <- function() {
+  plot(roc_result, main = "Total Sulfur Dioxide")
+  lines(x = c(0, 1),
+        y = c(0, 1),
+        col = "red")
+}
+tmp()
+
+auc <- performance(rates, measure = "auc")
+# auc@y.values[[1]]
+# 0.955
+
+
+# TOP CONTENDERS: 
+# TOTAL.SULFUR.DIOXIDE ( more robust boxplot )
+# CHLORIDES
+```
+
+Simple logistic regression models were fit with each of the individual predictors on training data and then evaluated using the test set. ROC curves were plotted and AUC measures were derived. **chlorides** and **Total Sulfur Dioxide** both had AUC values ~ 0.95. Each of the simple logistic regression models will take the form of:
+
+$$log(\frac{\pi}{1 - \pi}) = \beta_0 + \beta_1 var_1$$
+
+#### Logistic Regression with only *chlorides*
+
+```{r, echo=FALSE, warning=FALSE}
+model <- glm(winetype ~ chlorides, family = 'binomial', data = train)
+preds <- predict(model, newdata = test, type = "response")
+rates <- prediction(preds, test$winetype)
+kable(table(test$winetype, preds > 0.5), caption = "Confusion Matrix with Threshold = 0.5")
+```
+
+The model predicts too many white wines as red wines (top right corner of the confusion matrix) at a prediction cutoff value of 0.5. This is likely due to the imbalance of red and white wines in the original dataset. In order to counter-act the imbalance in the confusion matrix, too many true negatives (top right corner), we can try raising the predicted probability threshold to a number greater than 0.5. This will force the confusion matrix to become more balanced and yield a more representative model. 
+
+```{r, echo=FALSE, message=FALSE}
+kable(table(test$winetype, preds > 0.65), caption = "Confusion Matrix with Threshold = 0.65")
+```
+
+A cutoff value of 0.65 yields a far more balanced prediction, with an almost even number of true negatives (126) and false positives (129). 
+
+```{r, echo=FALSE, message=FALSE, comment = ""}
+summary(model)
+# 1 - pchisq(model$null.deviance - model$deviance, 1)
+```
+$$H_0: \beta_{chlorides} = 0$$
+$$H_a: \beta_{chlorides} \neq 0$$
+$$ \Delta G^2 = \textit{residual deviance of reduced model - residual deviance of full model} $$
+
+The resulting p-value for the hypothesis test above is 0. Therefore, we can reject the null hypothesis and confidently say the simple logistic regression model created using chlorides as the sole predictor variable is a useful model. 
+
+#### Multiple Linear Regression on *chlorides* \newline
+
+The next model will evaluate how each of the other predictor variables in the original dataset affect the value of the chlorides variable and how significant they are. 
+
+```{r, echo = FALSE, comment= ""}
+wine2 <- select(wine,-winetype)
+chlor_model <- lm(chlorides ~ ., data = wine2)
+summary(chlor_model)
+```
+
+
+```{r, echo = FALSE, out.width='50%', fig.show = 'hold', fig.keep='all', warning=FALSE}
+acf(chlor_model$residuals, main="ACF of Residuals")
+tmp <- function() {
+  qqnorm(chlor_model$residuals)
+  qqline(chlor_model$residuals, col="red")
+}
+tmp()
+```
+
+Based on this model, almost all of the predictors, besides alcohol and quality, are incredibly significant in their ability to help predict the value of chlorides for a wine. Based on the ACF and QQ plots, the model does violate multiple assumptions of the regression model. Further analysis will be conducted. 
+
+```{r, echo=FALSE, out.width='70%', fig.show = 'hold',fig.align='center', fig.keep='all', warning=FALSE}
+##residuals
+res <- chlor_model$residuals
+
+##studentized residuals
+student.res <- rstandard(chlor_model)
+
+##externally studentized residuals
+ext.student.res <- rstudent(chlor_model)
+par(mfrow = c(1, 3))
+
+plot(chlor_model$fitted.values, res, main = "Residuals")
+plot(chlor_model$fitted.values, student.res, main = "Studentized Residuals")
+plot(chlor_model$fitted.values, ext.student.res, main = "Externally Studentized Residuals")
+```
+
+The residual plot, the studentized residual plot, and the externally studentized residual plot all look extremely similar. This indicates that there are few, if any strongly outlying influential points in the dataset when it comes to predicting our single predictor of wine type in this case, chlorides. Next, a number of tests will be conducted to determine if this is true by searching for influential observations within the dataset. 
+
+```{r, echo = FALSE, out.width='50%', fig.show = 'hold', results='hide',fig.keep='all', warning=FALSE}
+n <- nrow(wine2)
+p <- ncol(wine2)
+
+##critical value using Bonferroni procedure
+# qt(1-0.05/(2*n), n-p-1)
+
+tmp <- function() {
+  plot(ext.student.res, main = "Externally Studentized Residuals", ylim =
+       c(-6, 6))
+  abline(h = qt(1 - 0.05 / (2 * n), n - p - 1), col = "red")
+  abline(h = -qt(1 - 0.05 / (2 * n), n - p - 1), col = "red")
+}
+tmp()
+
+# ext.student.res[abs(ext.student.res)>qt(1-0.05/(2*n), n-p-1)]
+
+##leverages
+lev <- lm.influence(chlor_model)$hat
+
+# sort(lev)
+# 2*p/n
+
+tmp <- function() {
+  plot(lev, main = "Leverages", ylim = c(0, 0.4))
+  abline(h = 2 * p / n, col = "red")
+}
+tmp()
+
+# lev[lev>2*p/n]
+
+##influential observations
+DFFITS <- dffits(chlor_model)
+# length(DFFITS[abs(DFFITS)>2*sqrt(p/n)])
+
+DFBETAS <- dfbetas(chlor_model)
+# length(DFBETAS[abs(DFBETAS)>2/sqrt(n)])
+
+COOKS <- cooks.distance(chlor_model)
+# length(COOKS[COOKS>qf(0.5,p,n-p)])
+```
+
+$$ DFFITS_i = \frac{\hat{y}_i - \hat{y}_{(i)}}{\sqrt{S^2_{(i)} h_{ii}}}  $$
+
+$$ DFBETAS_{j,i} = \frac{\hat{\beta_j} - \hat{\beta_{j (i)}}}{\sqrt{S^2_{(i)} C_{jj}}} $$
+
+$$ COOK'S \enspace D = D_i = \frac{(\hat{\beta_{(i)}} - \hat{\beta})^T X^T X (\hat{\beta_{(i)}} - \hat{\beta})}{p MS_{res}} $$
+
+The DFFITS and DFBETAS tests for influential observations determined a number of points were influential in predicting the value of chlorides. However, the COOKS test found none. As well, the leverages plot indicates that there are a number of influential observations when it comes to predicting the value of chlorides. This makes sense given that the variety of wine types out there is extremely broad and different soil types from across the globe will likely yield vastly different chemical compositions of the wines produced there. 
+
+#### Logistic Regression with only *total.sulfur.dioxide*
+
+```{r cars,echo = FALSE, comment=""}
+# Read in the data
+redwine <- read.csv("wineQualityReds.csv", header = TRUE)[2:13]
+whitewine <- read.csv("wineQualityWhites.csv",header = TRUE)[2:13]
+
+# Create new variable 
+redwine$winetype <- "redwine"
+whitewine$winetype <- "whitewine"
+
+# Row Bind two datasets together
+wine <- rbind(redwine, whitewine)
+set.seed(666)
+test_rows <- sample(nrow(wine), nrow(wine) * 0.25)
+wine$winetype <- as.factor(wine$winetype)
+
+# Create train and test
+test <- wine[test_rows,]
+train <- wine[-test_rows,]
+
+# Get redwine data and whitewine data for splitting
+red <- wine %>% filter(winetype == 'redwine')
+white <- wine %>% filter(winetype == 'whitewine')
+
+# Select 1000 rows from each dataset
+set.seed(666)
+train_rows_red <- sample(nrow(red), 1000)
+train_rows_white <- sample(nrow(white), 1000)
+
+# Split train and test
+train_red <- red[train_rows_red, ]
+test_red <- red[-train_rows_red, ]
+train_white <- white[train_rows_white, ]
+test_white <- white[-train_rows_white, ]
+
+# Row bind 
+test2 <- rbind(test_red, test_white)
+train2 <- rbind(train_red, train_white)
+# Get redwine data and whitewine data for splitting
+red <- wine %>% filter(winetype == 'redwine')
+white <- wine %>% filter(winetype == 'whitewine')
+
+# Select 1000 rows from each dataset
+set.seed(666)
+train_rows_red <- sample(nrow(red), 1000)
+train_rows_white <- sample(nrow(white), 1000)
+
+# Split train and test
+train_red <- red[train_rows_red, ]
+test_red <- red[-train_rows_red, ]
+train_white <- white[train_rows_white, ]
+test_white <- white[-train_rows_white, ]
+
+# Row bind 
+test2 <- rbind(test_red, test_white)
+train2 <- rbind(train_red, train_white)
+
+
+sulfur_dioxide <- glm(
+  winetype ~ total.sulfur.dioxide, 
+  family = binomial,
+  data = train
+)
+
+summary(sulfur_dioxide)
+```
+
+
+```{r, out.width='75%', fig.show = 'hold',fig.keep='all', warning=FALSE, comment=""}
+rates2 <-
+  prediction(predict(sulfur_dioxide, newdata = test2, type = "response"),
+             test2$winetype)
+
+roc_result2 <-
+  performance(rates2, measure = "tpr", x.measure = "fpr")
+tmp <- function() {
+  plot(roc_result2, main = "ROC Curve for Wine Classification")
+  lines(x = c(0, 1),
+        y = c(0, 1),
+        col = "red")
+}
+
+auc2 <- performance(rates2, measure = "auc")@y.values[[1]]
+print(paste("The AUC for our simple sulfuric dioxide model is", round(auc2, 4)))
+
+kable(table(test2$winetype, rates2@predictions[[1]] > 0.5), caption = "Confusion Matrix")
+```
+
+To test the significance of predictor total sulfur dioxide the  $\Delta G^2$ is calculated as below:
+
+$$ \Delta G^2 = \textit{residual deviance - residual deviance } =  5410.8 - 2033.6  =  3377.2$$
+
+We can get our p value to be approximately 0. Therefore, we  reject our null hypothesis and this outcome suggests that we are required to keep the variable sulfuric dioxide in our model. Using a threshold of 0.5, we can see that:
+
+- Overall error rate is: $(132 + 115) / (132 + 484 + 115 + 3766) = 5.49\%$
+- False Positive rate is: $115 / (115 + 484) = 19.19\%$
+- False Negative rate is: $132 / (132 + 3766) = 3.39\%$
+- Sensitivity rate is: $1 - FNR = 96.61\%$
+- Specificity rate is: $1 - FPR = 80.81\%$
+
+From the ROC curve, AUC value and different rates, we can see that our model  deteriorated. While our AUC value was 0.9561, we had a much higher false positive rate, overall error rate, and false negative rate. Therefore we can conclude that while the logistical model with just the variable *total.sulfuric.acid* has a high error rate with false positives and relatively low specificity compared to our reduced model. Therefore, if this model is used in industrial domains, it should be utilized with a lot of caution compared to the reduced model.
+
+#### Multiple Linear Regression on *total.sulfuric.acid* \newline
+Extrapolating from our previous analysis, we want to see how total.sulfuric.acid is affected by our logistical regression classifier. We want to see if we can also use other predictors to predict the average amount of total.sulfuric.acid in our wine. So our new procedure is to run a linear regression with the other significant predictors.
+```{r cars1,echo = FALSE, comment = ""}
+linear_sulfur <-
+  lm(
+    total.sulfur.dioxide ~ volatile.acidity + residual.sugar + chlorides +
+      free.sulfur.dioxide  + density + alcohol,
+    data = train2
+  )
+
+summary(linear_sulfur)
+
+```
+
+The F statistic and each individual t statistic both suggest that all predictors in the model are statistically significant. Therefore, our model for the total.sulfur.dioxide is: 
+
+$$
+\begin{aligned}
+E(total.sulfur.dioxide) & = 7420 - 24.9 \cdot x_{volatile.acidity} + 5.044 \cdot x_{residual.sugar} - 58.06 \cdot x_{chlorides}  \\
+                        &  + 1.7 \cdot x_{free.sulfur.dioxide} - 7266 \cdot x_{density} - 14.04 \cdot x_{alcohol}
+\end{aligned}
+$$
+
+To ensure that all the assumptions for the multiple linear regression models are met, we also examed the residual plot, ACF plot and QQ plot for this model: 
+```{r echo = FALSE, out.width='50%', fig.show = 'hold', results='hide',fig.keep='all', warning=FALSE}
+
+tmp <- function() {
+  residual_plot <-
+    plot(
+      linear_sulfur$fitted.values,
+      linear_sulfur$residuals,
+      main = "Residuals vs fits",
+      xlab = "Fitted Value",
+      ylab = "Residual"
+    )
+  abline(h = 0, col = "red")
+}
+tmp()
+
+##ACF plot of residuals
+acf(linear_sulfur$residuals, main = "ACF of Residuals")
+
+##Normal probability or QQ plot of residuals
+tmp <- function() {
+  qqnorm(linear_sulfur$residuals)
+  qqline(linear_sulfur$residuals, col = "red")
+}
+tmp()
+
+```
+
+Looking at the residual plot, we can find that  there seems to be constant variance for most of the observations and a mean of 0 along the x axis. With the exception of a few outlying points towards the end of the x axis. Because of the sparseness of these outliers, it is still okay to assume that the model has a mean of zero, and constant variance. However, we also want to check out the ACF Plot to confirm our findings. In regards to our normal plot, we see that there is some deviation from the normality line, but with this many observations it is still acceptable. Checking the ACF Plot, and excluding the lag at 0, the observations are mostly within the acceptable bounds, except for the lag at 3, 7, 13, 18, 29, and 30. Therefore, it is appropriate to numerically check the high leverage observations in connection with the outliers.
+
+```{r echo = FALSE, out.width='50%', fig.show = 'hold', results='hide',fig.keep='all', warning=FALSE}
+##residuals
+res<-linear_sulfur$residuals 
+
+##studentized residuals
+student.res<-rstandard(linear_sulfur) 
+
+##externally studentized residuals
+ext.student.res<-rstudent(linear_sulfur) 
+
+plot(linear_sulfur$fitted.values,res,main="Residuals")
+plot(linear_sulfur$fitted.values,student.res,main="Studentized Residuals")
+plot(linear_sulfur$fitted.values,ext.student.res,main="Externally  Studentized Residuals")
+
+n <- nrow(train2)
+p <- 6
+
+##critical value using Bonferroni procedure
+qt(1 - 0.05 / (2 * n), n - p - 1)
+
+tmp <- function() {
+  plot(ext.student.res, main = "Externally Studentized Residuals", ylim =
+       c(-6, 6))
+  abline(h = qt(1 - 0.05 / (2 * n), n - p - 1), col = "red")
+  abline(h = -qt(1 - 0.05 / (2 * n), n - p - 1), col = "red")
+}
+tmp()
+```
+
+As seen from the external studentized residuals there are several outliers in the response variable total.sulfuric.dioxide, which confirmed our hypothesis that our there are some high leverage observations in connection with the outliers.
+
+
+## Conclusion
+
+
+

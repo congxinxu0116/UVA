@@ -1,0 +1,191 @@
+<!--- Below are global settings for knitr. You can override any of them by adding the changes to individual chunks --->
+
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(error = TRUE,         # Keep compiling upon error
+                      collapse = FALSE,     # collapse by default
+                      echo = TRUE,          # echo code by default
+                      comment = "#>",       # change comment character
+                      fig.width = 5,        # set figure width
+                      fig.align = "center", # set figure position
+                      out.width = "49%",    # set width of displayed images
+                      warning = FALSE,      # do not show R warnings
+                      message = FALSE)      # do not show R messages
+```
+
+<!--- Solution Region --->
+```{css, echo=FALSE}
+#solution {
+  background-color: #8FBC8F;
+  border-style: solid;
+  border-color: blue;
+  padding: .5em;
+  margin: 20px
+}
+```
+
+
+**SYS 6018 | Fall 2020 | University of Virginia **
+
+*******************************************
+
+<!--- Load Required R packages here --->
+```{r, include=FALSE}
+library(tidyverse)
+digits <- function(x, k=2) format(round(x, k), nsmall=k)
+data.dir = 'https://mdporter.github.io/SYS6018/data/'
+```
+
+### Problem 0.1: Who are you?
+
+a. What is your name? 
+
+<div id="solution">
+Congxin (David) Xu
+</div>
+
+b. Where are you from (e.g., hometown)? 
+
+<div id="solution">
+Hefei, Anhui, China
+</div>
+
+c. What do you hope to do after graduation (be specific)?  
+
+<div id="solution">
+Work as a Lead/Senior Data Scientist
+</div>
+
+d. List 3 interesting things about yourself. 
+
+<div id="solution">
+1. I love playing board games
+2. I love playing sports with a racquet, such as badminton, tennis, racquetball, squash, etc.  
+3. I have 3-year-old American short hair cat, Maca. 
+</div>
+
+
+----------
+
+### Problem 0.2: About the course
+
+a. What are you most excited to learn in this course?
+
+<div id="solution">
+Study different data mining techniques and understand how those techniques can be applied to the machine learning forecasting models. 
+</div>
+
+
+b. What pre-req topics (e.g., math, coding, probability, statistics) are your weakest? 
+
+<div id="solution">
+I believe math may be my weakest pre-req topic. 
+</div>
+
+
+c. What pre-req topics are your strongest? 
+
+<div id="solution">
+I think I am strong at coding, probability and statistics.
+</div>
+
+d. Would you rather see the mathematical details or coding details of a method/algorithm? 
+
+<div id="solution">
+YES! Those are exactly what I am looking for in our MSDS program.
+</div>
+
+----------
+
+### Problem 0.3: Math Notation
+
+a. What are the equations for the least squares coefficients in linear regression (in matrix notation)? Use $X$ for the design/predictor matrix, and $Y$ the vector of responses. 
+
+<div id="solution">
+Using the matrix notation, the equation for the least squares coefficients in linear regression is 
+$$ Y = X \pmb{\beta} + \pmb{\varepsilon} $$
+where 
+$$ Y = \begin{bmatrix} y_1 \\ y_2 \\ \vdots \\ y_n 
+       \end{bmatrix}, \enspace
+X = \begin{bmatrix} 1 & x_{11} & x_{12} & \ldots & x_{1k} \\ 
+                    1 & x_{21} & x_{22} & \ldots & x_{2k} \\ 
+                    \vdots & \vdots & \vdots &   & \vdots \\ 
+                    1 & x_{n1} & x_{n2} & \ldots & x_{nk} \\ 
+    \end{bmatrix} , \enspace 
+\pmb{\beta} = \begin{bmatrix} \beta_0 \\ \beta_1 \\ \vdots \\ \beta_k 
+              \end{bmatrix}, \enspace
+\pmb{\varepsilon} = \begin{bmatrix} \varepsilon_1 \\ \varepsilon_2 \\ \vdots \\ \varepsilon_n                       \end{bmatrix} $$
+</div>
+
+
+b. Let $x_1, x_2, \ldots, x_n$ be a sample of length of time that a customer is on the phone with a call center help line. We feel comfortable modeling the data as coming from an *exponential distribution*. What is the MLE (Maximum Likelihood Estimate) of the parameter?  Show your steps.
+
+<div id="solution">
+The probability density function of the exponential distribution is defined as
+
+$$
+f(x;\lambda) = \begin{cases}
+\lambda e^{-\lambda x} & \text{if } x \geq 0 \\
+0 & \text{if } x<0
+\end{cases}
+$$
+
+Its likelihood function is
+
+$$
+\mathcal{L}(\lambda, x_1, \dots, x_n) = \prod_{i = 1}^n f(x_i, \lambda) = \prod_{i = 1}^n \lambda e^{-\lambda x} = \lambda^n e^{-\lambda\sum_{i=1}^n x_i}
+$$
+
+To calculate the maximum likelihood estimator I solved the equation
+
+$$
+\frac{d\ln\left(\mathcal{L}(\lambda,x_1,\dots,x_n)\right)}{d\lambda}\overset{!}{=}0
+$$
+
+for $\lambda$.
+
+$$
+\begin{align}
+\frac{d\ln\left(\mathcal{L}(\lambda,x_1,\dots,x_n)\right)}{d\lambda}
+&= \frac{d\ln\left(\lambda^ne^{-\lambda\sum_{i=1}^nx_i}\right)}{d\lambda} \\
+&= \frac{d\ln\left(n\ln(\lambda)-\lambda\sum_{i=1}^n x_i\right)}{d\lambda} \\
+&= \frac{n}{\lambda}-\sum_{i=1}^n x_i
+\end{align}
+$$
+
+Finally we get $$\lambda = \frac{n}{\sum\limits_{i=1}^n x_i}$$
+
+
+*Resource*: https://math.stackexchange.com/questions/101481/calculating-maximum-likelihood-estimation-of-the-exponential-distribution-and-pr
+
+</div>
+
+
+### Problem 0.4: Coding
+
+a. Simulate 100 observations from the following model:
+
+- $X \sim N(1, 1)$
+- $Y \sim N(1 + 2X, 2)$
+- $Z = \begin{cases} 1 &\quad Y<0 \\ 2 &\quad Y \ge 0 \end{cases}$
+
+<div id="solution">
+
+
+```{r}
+set.seed(666)
+x <- rnorm(n = 100, mean = 1, sd = 1)
+y <- rnorm(n = 100, mean = 1 + 2*x, sd = 2)
+z <- ifelse(y < 0, 1, 2)
+```
+
+</div>
+
+b. Make a scatter plot of the data. Put $X$ on the x-axis and $Y$ on the y-axis. Color the points according to $Z$. 
+
+<div id="solution">
+```{r}
+library(ggplot2)
+df <- data.frame(x, y, z)
+ggplot(data = df) + geom_point(aes(x = x, y = y, color = z))
+```
+</div>

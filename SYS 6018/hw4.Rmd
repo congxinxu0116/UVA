@@ -1,0 +1,572 @@
+---
+title: 'Homework #4'
+---
+#### Congxin (David) Xu
+#### Computing ID: cx2rx
+
+**SYS 6018 | Fall 2020 | University of Virginia **
+
+*******************************************
+
+<!--- Below are global settings for knitr. You can override any of them by adding the changes to individual chunks --->
+
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(error=TRUE,        # Keep compiling upon error
+                      collapse=FALSE,    # collapse by default
+                      echo=TRUE,         # echo code by default
+                      comment = "#>",    # change comment character
+                      fig.width = 5,     # set figure width
+                      fig.align = "center",# set figure position
+                      out.width = "49%", # set width of displayed images
+                      warning=FALSE,     # do not show R warnings
+                      message=FALSE)     # do not show R messages
+options(dplyr.summarise.inform = FALSE)  # ignore message about group structure
+```
+
+<!--- Solution Region --->
+```{css solution-region, echo=FALSE}
+.solution {
+  background-color: #232D4B10;
+  border-style: solid;
+  border-color: #232D4B;
+  padding: .5em;
+  margin: 20px
+}
+```
+
+
+<!--- Load Required R packages here --->
+```{r formatting, include=FALSE}
+#- Better table printing
+library(kableExtra) # https://haozhu233.github.io/kableExtra/awesome_table_in_html.html
+format_table <- function(x, nmax=10) {
+  kable(x) %>% 
+    kable_styling(full_width = FALSE, font_size=11, position = "left") %>% 
+    {if(nrow(x) > nmax) scroll_box(., width = "100%", height = "200px") else .}
+}
+#- useful functions
+digits <- function(x, k=2) format(round(x, k), nsmall=k)
+#- data directory
+data.dir = 'https://mdporter.github.io/SYS6018/data/'
+#- required functions
+library(tidyverse)
+library(glmnet)
+```
+
+
+
+## Crime Linkage
+
+Crime linkage attempts to determine if two or more unsolved crimes share a common offender. *Pairwise* crime linkage is the more simple task of deciding if two crimes share a common offender; it can be considered a binary classification problem. The linkage training data has 8 evidence variables that measure the similarity between a pair of crimes:
+
+- `spatial` is the spatial distance between the crimes
+- `temporal` is the fractional time (in days) between the crimes
+- `tod` and `dow` are the differences in time of day and day of week between the crimes
+- `LOC`, `POA,` and `MOA` are binary with a 1 corresponding to a match (type of property, point of entry, method of entry)
+- `TIMERANGE` is the time between the earliest and latest possible times the crime could have occurred (because the victim was away from the house during the crime).
+- The response variable indicates if the crimes are linked ($y=1$) or unlinked ($y=0$).
+
+
+These problems use the [linkage-train](https://mdporter.github.io/SYS6018/data/linkage_train.csv) and [linkage-test](https://mdporter.github.io/SYS6018/data/linkage_test.csv) datasets (click on links for data). 
+
+
+### Problem 4.1: Penalized Regression for Crime Linkage
+
+a. Fit a penalized *linear regression* model. Use a lasso, ridge, or elasticnet penalty (your choice). 
+    - Report the value of $\alpha$ used (if elasticnet)
+    - Report the value of $\lambda$ used
+    - Report the estimated coefficients
+
+
+<div class="solution"> 
+
+```{r 4.1 a (1), message=FALSE}
+# Read in training and testing data
+train <- read_csv("https://mdporter.github.io/SYS6018/data/linkage_train.csv")
+# test <- read_csv("https://mdporter.github.io/SYS6018/data/linkage_test.csv")
+
+# Define Training data 
+X.train = train %>% select(-y) %>% as.matrix()
+Y.train = train %>% select(y) %>% as.matrix()
+
+# Control Randomness
+set.seed(666) 
+
+# Cross Validation Setting
+n.folds <- 10
+fold <- sample(rep(1:n.folds, length = nrow(X.train)))
+
+# Pre-defined setting
+alpha <- seq(0, 1, 0.01)
+
+# Create a empty list to store results
+output <- list()
+
+# Finding the best alpha
+for (m in 1:length(alpha)) {
+
+    # Build model using CV 
+    model <- cv.glmnet(x = X.train, y = Y.train, foldid = fold, alpha = alpha[m])
+    
+    # Store the data into output
+    output[[m]] <- data.frame(alpha = alpha[m], 
+                              lambda = model$lambda.1se,
+                              mse = model$cvm[which(model$lambda == model$lambda.1se)])
+  
+}
+
+# Convert list back to data frame
+output <- bind_rows(output)
+
+# Report alpha and lambda for final prediction
+best_linear <- output %>% 
+  filter(mse == min(mse))
+print(best_linear)
+```
+The parameters I will use for final model fitting are $\alpha = 0.74$,  $\lambda = 0.01639806$. Estimated Coefficients are:
+
+```{r 4.1 a (2)}
+# Report the estimated coefficients
+best_linear_model <- cv.glmnet(x = X.train, y = Y.train, foldid = fold, alpha = best_linear$alpha)
+coef(best_linear_model)
+```
+
+</div>
+
+
+b. Fit a penalized *logistic regression* model. Use a lasso, ridge, or elasticnet penalty (your choice).  
+    - Report the value of $\alpha$ used (if elasticnet)
+    - Report the value of $\lambda$ used
+    - Report the estimated coefficients
+
+<div class="solution"> 
+
+```{r 4.1 b(1)}
+# Control Randomness
+set.seed(666) 
+
+# Pre-defined setting
+alpha <- seq(0, 1, 0.05)
+
+# Create a empty list to store results
+output <- list()
+
+# Finding the best alpha
+for (m in 1:length(alpha)) {
+
+    # Build model using CV 
+    model <- cv.glmnet(x = X.train, 
+                       y = Y.train, 
+                       foldid = fold, 
+                       alpha = alpha[m], 
+                       family = 'binomial')
+    
+    # Store the data into output
+    output[[m]] <- data.frame(alpha = alpha[m], 
+                              lambda = model$lambda.1se,
+                              deviance = model$cvm[which(model$lambda == model$lambda.1se)])
+  
+}
+
+# Convert list back to data frame
+output <- bind_rows(output)
+
+# Report alpha and lambda for final prediction
+best_logit <- output %>% 
+  filter(deviance == min(deviance))
+print(best_logit)
+```
+The parameters I will use for final model fitting are $\alpha = 0.4$,  $\lambda = 0.00224208$. Estimated Coefficients are:
+
+```{r 4.1 b(2)}
+# Report the estimated coefficients
+best_logit_model <-
+  cv.glmnet(
+    x = X.train,
+    y = Y.train,
+    foldid = fold,
+    alpha = min(best_logit$alpha),
+    family = 'binomial'
+  )
+coef(best_logit_model)
+```
+
+
+</div>
+
+c. Produce one plot that has the ROC curves, using the *training data*, for both models (from part a and b). Use color and/or linetype to distinguish between models and include a legend.    
+
+<div class="solution"> 
+
+```{r 4.1 c}
+# Set threshold 
+linear_roc <- train %>%
+  select(y) %>%
+  mutate(pred_linear = predict(best_linear_model, newx = X.train, type = "response")) %>%
+  group_by(pred_linear) %>% 
+  summarize(n = n(), 
+            n.1 = sum(y), 
+            n.0 = n - sum(y)) %>%
+  ungroup() %>%
+  arrange(pred_linear) %>% 
+  mutate(FN = cumsum(n.1),    # false negatives 
+         TN = cumsum(n.0),    # true negatives
+         TP = sum(n.1) - FN,  # true positives
+         FP = sum(n.0) - TN,  # false positives
+         N = cumsum(n),       # number of cases predicted to be 1
+         TPR = TP/sum(n.1), 
+         FPR = FP/sum(n.0)) %>% 
+  #- only keep relevant metrics
+  select(-n, -n.1, -n.0, pred_linear)
+
+logit_roc <- train %>%
+  select(y) %>%
+  mutate(pred_logit = predict(best_logit_model, newx = X.train, type = "response")) %>%
+  group_by(pred_logit) %>% 
+  summarize(n = n(), 
+            n.1 = sum(y), 
+            n.0 = n - sum(y)) %>%
+  ungroup() %>%
+  arrange(pred_logit) %>% 
+  mutate(FN = cumsum(n.1),    # false negatives 
+         TN = cumsum(n.0),    # true negatives
+         TP = sum(n.1) - FN,  # true positives
+         FP = sum(n.0) - TN,  # false positives
+         N = cumsum(n),       # number of cases predicted to be 1
+         TPR = TP/sum(n.1), 
+         FPR = FP/sum(n.0)) %>% 
+  #- only keep relevant metrics
+  select(-n, -n.1, -n.0, pred_logit)
+
+# Create a ROC Curve
+ggplot() + 
+  geom_path(data = linear_roc, aes(x = FPR, y = TPR, color = "Linear")) +
+  geom_path(data = logit_roc, aes(x = FPR, y = TPR, color = "Logit")) +
+  scale_color_discrete(name = "Model") + 
+  labs(x = 'FPR (1-specificity)', y = 'TPR (sensitivity)') +
+  geom_segment(x = 0, xend = 1, y = 0, yend = 1, lty = 3, color = 'grey50') +
+  scale_x_continuous(breaks = seq(0, 1, by = .20)) +
+  scale_y_continuous(breaks = seq(0, 1, by = .20)) +
+  ggtitle("ROC Curve")
+```
+
+</div>
+
+
+d. Recreate the ROC curve from the penalized logistic regression model using repeated hold-out data. The following steps will guide you:
+    - Fix $\alpha=.75$ 
+    - Run the following steps 25 times:
+      i. Hold out 500 observations
+      ii. Use the remaining observations to estimate $\lambda$ 
+      iii. Predict the probability of the 500 hold-out observations
+      iv. Store the predictions and hold-out labels
+    - Combine the results and produce the hold-out based ROC curve
+    - Note: by estimating $\lambda$ each iteration, we are incorporating the uncertainty present in estimating that tuning parameter. 
+    
+<div class="solution"> 
+
+```{r 4.1 d}
+# Set Seed
+set.seed(666)
+
+# Create a empty list to store results
+output <- list()
+
+# Simulation
+for (m in 1:25) { 
+  # Hold out 500 observations
+  holdout <- sample(nrow(train), 500, replace = FALSE)
+  
+  # Define train and hold out data
+  X.train = train[-holdout,] %>% select(-y) %>% as.matrix()
+  Y.train = train[-holdout,] %>% select(y) %>% as.matrix()
+  
+  X.valid = train[holdout,] %>% select(-y) %>% as.matrix()
+  Y.valid = train[holdout,] %>% select(y)
+  
+  # Cross Validation Setting
+  n.folds <- 10
+  fold <- sample(rep(1:n.folds, length = nrow(X.train)))
+  
+  # Run the elastic net model to estimate lambda 
+  model <- cv.glmnet(x = X.train,
+                     y = Y.train, 
+                     foldid = fold, 
+                     alpha = 0.75, 
+                     family = 'binomial')
+  
+  # Store the calculation to output
+  output[[m]] <- train[holdout,] %>% 
+    select(y) %>% 
+    mutate(pred_logit = predict(model, newx = X.valid, type = "response")) 
+}
+
+# Convert list back to data frame
+output_roc <- bind_rows(output) %>%
+    group_by(pred_logit) %>% 
+    summarize(n = n(), 
+              n.1 = sum(y), 
+              n.0 = n - sum(y)) %>%
+    ungroup() %>%
+    arrange(pred_logit) %>% 
+    mutate(FN = cumsum(n.1),    # false negatives 
+           TN = cumsum(n.0),    # true negatives
+           TP = sum(n.1) - FN,  # true positives
+           FP = sum(n.0) - TN,  # false positives
+           N  = cumsum(n),      # number of cases predicted to be 1
+           TPR = TP / sum(n.1), 
+           FPR = FP / sum(n.0)) %>% 
+    #- only keep relevant metrics
+    select(-n, -n.1, -n.0, pred_logit) %>% 
+    mutate(Run = m,
+           lambda = model$lambda.1se)
+
+# Create a ROC Curve
+ggplot() +
+  geom_path(data = output_roc, aes(x = FPR, y = TPR)) +
+  scale_color_discrete(name = "Run") +
+  labs(x = 'FPR (1-specificity)', y = 'TPR (sensitivity)') +
+  geom_segment(x = 0, xend = 1, y = 0, yend = 1, lty = 3, color = 'black') +
+  scale_x_continuous(breaks = seq(0, 1, by = .2)) +
+  scale_y_continuous(breaks = seq(0, 1, by = .2)) +
+  ggtitle("ROC Curve")
+
+```
+
+
+</div>
+
+```{r, include=FALSE}
+# Clear the memory and garbage collection
+rm(list=ls())
+gc()
+```
+
+e. Contest Part 1: Predict the estimated *probability* of linkage for the test data (using any model). 
+    - Submit a .csv file (ensure comma separated format) named `lastname_firstname_1.csv` that includes the column named **p** that is your estimated posterior probability. We will use automated evaluation, so the format must be exact. 
+    - You are free to use any tuning parameters
+    - You are free to use any data transformation or feature engineering
+    - You will receive credit for a proper submission; the top five scores will receive 2 bonus points.     
+    - Your probabilities will be evaluated with respect to the mean negative Bernoulli log-likelihood (known as the average *log-loss* metric)
+$$ 
+L = - \frac{1}{M} \sum_{i=1}^m [y_i \log \, \hat{p}_i + (1 - y_i) \log \, (1 - \hat{p}_i)]
+$$
+where $M$ is the number of test observations, $\hat{p}_i$ is the prediction for the $i$th test observation, and $y_i \in \{0,1\}$ are the true test set labels. 
+
+<div class="solution"> 
+
+```{r 4.1 e (1), message=FALSE}
+# Reading in the train and test
+train <- read_csv("https://mdporter.github.io/SYS6018/data/linkage_train.csv")
+
+# Log transformation of the TIMERANGE
+train$TIMERANGE <- ifelse(train$TIMERANGE == 0, 0, log(train$TIMERANGE))
+
+# Control Randomness
+set.seed(666) 
+
+# Cross Validation Setting
+n.folds <- 10
+fold <- sample(rep(1:n.folds, length = nrow(train)))
+
+# Pre-defined setting
+alpha <- seq(0, 1, 0.05)
+
+# Create a empty list to store results
+output <- list()
+
+# Finding the best alpha
+for (m in 1:length(alpha)) {
+  
+  # Create an empty fold list to record loss on each fold
+  fold_list <- list()
+  
+  # Find the average loss cross fold
+  for (f in 1:n.folds) {
+    # Define train and hold out data
+    X.train = train[fold != f,] %>% select(-y) %>% as.matrix()
+    Y.train = train[fold != f,] %>% select(y) %>% as.matrix()
+    
+    X.valid = train[fold == f,] %>% select(-y) %>% as.matrix()
+    Y.valid = train[fold == f,] %>% select(y)
+    
+    # Build model using CV 
+    model <- glmnet(x = X.train, 
+                    y = Y.train, 
+                    alpha = alpha[m], 
+                    family = 'binomial')
+    
+    # Create an empty loss list to pick lambda
+    loss <- list()
+    
+    # Finding the best lambda
+    for (i in 1:length(model$lambda)) {
+      loss[[i]] <-  Y.valid %>% 
+        mutate(lambda = model$lambda[i]) %>% 
+        mutate(pred = predict(model, newx = X.valid, 
+                              s = model$lambda[i], type = 'response')) %>% 
+        mutate(loss = (y * log(pred) + (1 - y)*log(1 - pred))) %>% 
+        group_by(lambda) %>% 
+        summarise(loss = -mean(loss))
+    }
+    
+    # Convert loss list back to data frame
+    fold_list[[f]] <- bind_rows(loss) %>% 
+      filter(loss == min(loss)) %>% 
+      mutate(fold = f)
+   
+  } 
+  # Convert fold list back to data frame
+    output[[m]] <- bind_rows(fold_list) %>% 
+      mutate(alpha = alpha[m]) %>% 
+      group_by(alpha) %>% 
+      summarise(lambda = mean(lambda), loss = mean(loss))
+    # print(m) # tracking where we are :)
+}
+
+# Get final prediction parameters
+final <- bind_rows(output) %>% 
+  filter(loss == min(loss))
+final
+```
+
+```{r 4.1 e final prediction, message=FALSE}
+# Read in test data
+test <- read_csv("https://mdporter.github.io/SYS6018/data/linkage_test.csv")
+
+# Refit model with best alpha and best lambda using all training data
+model <- glmnet(x = train %>% select(-y) %>% as.matrix(), 
+                y = train %>% select(y) %>% as.matrix(), 
+                alpha = final$alpha[1],
+                family = 'binomial')
+
+# Convert test from data frame to matrix
+Y.test <-  test %>% 
+  mutate(TIMERANGE = ifelse(TIMERANGE == 0, 0, log(TIMERANGE))) %>% 
+  as.matrix()
+
+# Make final prediction
+test$p <- predict(model, newx = Y.test, s = final$lambda[1], type = 'response')
+
+# Write out the CSV file
+write_csv(test, "xu_congxin_1.csv")
+```
+
+</div>
+
+f. Contest Part 2: Predict the linkages for the test data (using any model). 
+    - Submit a .csv file (ensure comma separated format) named `lastname_firstname_2.csv` that includes the column named **link** that takes the value of 1 for linkages and 0 for unlinked pairs. We will use automated evaluation, so the format must be exact. 
+    - You are free to use any tuning parameters.
+    - You are free to use any data transformation or feature engineering.
+    - Your labels will be evaluated based on total cost, where cost is equal to `1*FP + 8*FN`. This implies that False Negatives (FN) are 8 times as costly as False Negatives (FP)    
+    - You will receive credit for a proper submission; the top five scores will receive 2 bonus points. Note: you only will get bonus credit for one of the two contests. 
+
+```{r, include=FALSE}
+# Clear the memory and garbage collection
+rm(list=ls())
+gc()
+```
+
+<div class="solution"> 
+In my previous part, I have found the best parameter for alpha and lambda to calculate the probability of linkage for the test data. Now, we just need to find the best threshold that classifies the probability into different classes that minimize the cost function.
+```{r 4.1 f, message=FALSE, warning=FALSE}
+# Reading in the train and test
+train <- read_csv("https://mdporter.github.io/SYS6018/data/linkage_train.csv")
+
+# Log transformation of the TIMERANGE
+train$TIMERANGE <- ifelse(train$TIMERANGE == 0, 0, log(train$TIMERANGE))
+
+# Control Randomness
+set.seed(666) 
+
+# Cross Validation Setting
+n.folds <- 10
+fold <- sample(rep(1:n.folds, length = nrow(train)))
+
+# Pre-defined setting
+alpha <-  0.05 # final$alpha[1]
+lambda <- 0.0002865133 # final$lambda[1]
+threshold <- seq(0, 1, 0.001)
+
+# Create a empty list to store results
+output <- list()
+
+# Find the average loss cross fold
+for (f in 1:n.folds) {
+  # Define train and hold out data
+  X.train = train[fold != f,] %>% select(-y) %>% as.matrix()
+  Y.train = train[fold != f,] %>% select(y) %>% as.matrix()
+  
+  X.valid = train[fold == f,] %>% select(-y) %>% as.matrix()
+  Y.valid = train[fold == f,] %>% select(y)
+  
+  # Build model using CV 
+  model <- glmnet(x = X.train, 
+                  y = Y.train, 
+                  alpha = alpha, 
+                  family = 'binomial')
+  
+  # Create an empty loss list to pick lambda
+  loss <- list()
+  
+  # Finding the best threshold
+  for (i in 1:length(threshold)) {
+    loss[[i]] <- Y.valid %>% 
+      mutate(pred = predict(model, newx = X.valid, 
+                            s = lambda, type = 'response')) %>% 
+      mutate(pred = ifelse(pred >= threshold[i], 1, 0),
+             FP = ifelse(pred == 1 & y == 0, 1, 0),
+             FN = ifelse(pred == 0 & y == 1, 1, 0),
+             loss =  1 * FP + 8 * FN,
+             threshold = threshold[i]) %>% 
+      group_by(threshold) %>% 
+      summarise(loss = sum(loss))
+  }
+  
+  # Convert loss list back to data frame
+  output[[f]] <- bind_rows(loss) %>% 
+    filter(loss == min(loss)) %>% 
+    mutate(fold = f)
+ 
+}
+
+# Get final prediction parameters
+final <- bind_rows(output) %>% 
+  select(threshold, loss, fold) %>% 
+  group_by(fold) %>% 
+  summarise(threshold = mean(threshold), loss = mean(loss)) %>% 
+  mutate(Id = "Final") %>% 
+  group_by(Id) %>% 
+  summarise(threshold = mean(threshold), loss = mean(loss)) %>% 
+  print()
+```
+
+```{r 4.1 f final prediction, message=FALSE, warning=FALSE}
+# Read in test data
+test <- read_csv("https://mdporter.github.io/SYS6018/data/linkage_test.csv")
+
+# Refit model with best alpha and best lambda using all training data
+model <- glmnet(x = train %>% select(-y) %>% as.matrix(), 
+                y = train %>% select(y) %>% as.matrix(), 
+                alpha = alpha,
+                family = 'binomial')
+
+# Convert test from data frame to matrix
+Y.test <-  test %>% 
+  mutate(TIMERANGE = ifelse(TIMERANGE == 0, 0, log(TIMERANGE))) %>% 
+  as.matrix()
+
+# Make final prediction
+test$link <- ifelse(predict(model, newx = Y.test, s = lambda, type = 'response') >= final$threshold[1], 1, 0)
+
+# Write out the CSV file
+write_csv(test, "xu_congxin_2.csv")
+```
+
+</div>
+
+
+
+
+
+

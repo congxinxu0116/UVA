@@ -1,0 +1,439 @@
+---
+title: 'Homework #1'
+---
+#### Congxin (David) Xu
+#### Computing ID: cx2rx
+
+**SYS 6018 | Fall 2020 | University of Virginia **
+
+*******************************************
+
+<!--- Below are global settings for knitr. You can override any of them by adding the changes to individual chunks --->
+
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(error = TRUE,         # Keep compiling upon error
+                      collapse = FALSE,     # collapse by default
+                      echo = TRUE,          # echo code by default
+                      comment = "#>",       # change comment character
+                      fig.width = 5,        # set figure width
+                      fig.align = "center", # set figure position
+                      out.width = "49%",    # set width of displayed images
+                      warning = FALSE,      # do not show R warnings
+                      message = FALSE)      # do not show R messages
+options(dplyr.summarise.inform = FALSE)     # ignore message about group structure
+```
+
+
+<!--- Solution Region --->
+```{css solution-region, echo=FALSE}
+.solution {
+  background-color: #232D4B10;
+  border-style: solid;
+  border-color: #232D4B;
+  padding: .5em;
+  margin: 20px
+}
+```
+
+
+<!--- Load Required R packages here --->
+```{r packages, include=FALSE}
+#- Better table printing
+library(kableExtra) # https://haozhu233.github.io/kableExtra/awesome_table_in_html.html
+format_table <- function(x, nmax = 10) {
+  kable(x) %>%
+    kable_styling(full_width = FALSE,
+                  font_size = 11,
+                  position = "left") %>%
+    {
+      if (nrow(x) > nmax)
+        scroll_box(., width = "100%", height = "200px")
+      else
+        .
+    }
+}
+#- useful functions
+digits <- function(x, k = 2)
+  format(round(x, k), nsmall = k)
+#- data directory
+data.dir = 'https://mdporter.github.io/SYS6018/data/'
+#- required functions
+library(tidyverse)
+```
+
+
+### Problem 1.1: Evaluating a Regression Model 
+
+a. Create a set of functions to generate data from the following distributions:
+\begin{align*}
+X &\sim \mathcal{N}(0, 1) \\
+Y &= -1 + .5X + .2X^2 + \epsilon \\
+\epsilon &\sim \mathcal{N}(0,\, \sigma)
+\end{align*}
+
+<div class="solution">
+```{r 1.1 a}
+X <- function(n, mean = 0, sd = 1) {
+  return(rnorm(n, mean = mean, sd = sd))
+}
+
+epsilon <- function(n, mean = 0, sigma) {
+  return(rnorm(n, mean = mean, sd = sigma))
+} 
+
+Y <- function(x, error) {
+  return(-1 + 0.5 * x + 0.2 * x^2 + error)
+}
+```
+</div>
+
+b. Simulate $n=100$ realizations from these distributions using $\sigma=3$. Produce a scatterplot and draw the true regression line $f(x) = E[Y \mid X=x]$. Use `set.seed(611)` prior to generating the data.
+
+<div class="solution">
+```{r 1.1 b}
+# Set Seed
+set.seed(611)
+
+# Parameters
+n = 100
+sigma = 3
+
+# Distributions 
+X_dist <- X(n)
+Eps_dist <- epsilon(n, sigma = sigma)
+Y_dist <- Y(x = X_dist, error = Eps_dist)
+
+# Create a Data Frame for graphing
+df <- data.frame(x = X_dist, y = Y_dist)
+
+# Create the scatter plot
+ggbase <- ggplot(data = df, aes(x = x, y = y)) + 
+  geom_point()
+
+ggbase + 
+  geom_line(aes(y = Y(x, 0), color = "true reg")) + 
+  scale_color_discrete(name="model")
+```
+</div>
+
+c. Fit three polynomial regression models using least squares: linear, quadratic, and cubic. Produce another scatterplot, add the fitted lines and true population line $f(x)$  using different colors, and add a legend that maps the line color to a model.
+    - Note: Notice that while the true model is quadratic, we are also fitting linear (less complex) and cubic (more complex) models. 
+
+<div class="solution">
+
+```{r 1.1 c}
+cubic <- lm(y ~ poly(x, 3), data = df)
+quadratic <- lm(y ~ poly(x, 2), data = df)
+linear <- lm(y ~ x, data = df)
+
+df <- df %>% 
+  mutate(y_cubic = cubic$fitted.values, 
+         y_quadratic = quadratic$fitted.values,
+         y_linear = linear$fitted.values)
+
+# Add additional regression lines to the base plot
+ggbase +
+  geom_line(aes(y = Y(x, 0), color = "true reg")) + 
+  geom_line(aes(y = y_cubic, color = "cubic"), data = df) + 
+  geom_line(aes(y = y_quadratic, color = "quadratic"), data = df) + 
+  geom_line(aes(y = y_linear, color = "linear"), data = df) + 
+  scale_color_discrete(name="model")
+```
+</div>
+
+d. Simulate a test data set of $10000$ observations from the same distributions. Use `set.seed(612)` prior to generating the test data. Calculate the estimated mean squared error (MSE) for each model. Are the results as expected? 
+
+<div class="solution">
+```{r 1.1 d}
+# Set Seed
+set.seed(612)
+
+# Pre-defined parameter
+n = 10000
+sigma = 3
+
+# New test data
+x_test = X(n)
+eps_test = epsilon(n, sigma = sigma)
+y_test = Y(x_test, eps_test)
+
+# Create a test data frame
+test <- data.frame(x = x_test, y = y_test)
+
+# Calculate the estimated MSE for each model
+yhat_cubic <- predict(cubic, newdata = test)
+yhat_quadratic <- predict(quadratic, newdata = test)
+yhat_linear <- predict(linear, newdata = test)
+
+mse <- data.frame(Model = c("cubic", "quadratic", "linear"), 
+                  # `Training MSE` = c(mean((cubic$residuals) ^ 2), 
+                  #                    mean((quadratic$residuals) ^ 2), 
+                  #                    mean((linear$residuals) ^ 2)),
+                  `Testing MSE` = c(mean((test$y - yhat_cubic)^ 2), 
+                                    mean((test$y - yhat_quadratic) ^ 2), 
+                                    mean((test$y - yhat_linear) ^ 2)))
+print(mse)
+```
+
+The results are not what I expected, because the true regression is in a quadratic form
+
+</div>
+
+e. What is the best achievable MSE? That is, what is the MSE if the true $f(x)$ was used to evaluate the test set? How close does the best method come to achieving the optimum? 
+
+<div class="solution">
+The best achievable MSE is 9.293776 from the linear model.
+```{r 1.1 e}
+# Calculate the MSE for the true f(x)
+y_true_reg <- -1 + 0.5* x_test + 0.2 * x_test^2
+mse_true_reg <- mean((test$y - y_true_reg)^2)
+
+# Print the values
+print(mse_true_reg)
+print(min(mse$Testing.MSE) - mse_true_reg)
+```
+
+The MSE for the true $f(x)$ is 8.972119. The best method has a 9.293776 MSE, which is 0.3216562 greater than the optimal MSE. 
+
+</div>
+
+f. The MSE scores obtained in part *d* came from one realization of training data. Here will we explore how much variation there is in the MSE scores by replicating the simulation many times. 
+    - Re-run the same simulation in part *d* 100 times. 
+    - Create kernel density plots (you choose bandwidth) of the resulting MSE values for each model. 
+    - Use `set.seed(613)` prior to running the simulation and do not set the seed in any other places.
+
+
+<div class="solution">
+```{r 1.1 f}
+# Set Seed
+set.seed(613)
+
+output <- list()
+
+for (i in 1:100) {
+  # Training Parameters
+  n = 100
+  
+  # Distributions 
+  X_dist <- X(n)
+  Eps_dist <- epsilon(n, sigma = sigma)
+  Y_dist <- Y(x = X_dist, error = Eps_dist)
+  
+  # Create a Data Frame for graphing
+  df <- data.frame(x = X_dist, y = Y_dist)
+  
+  # Re-run modeling with new training data
+  cubic <- lm(y ~ poly(x, 3), data = df)
+  quadratic <- lm(y ~ poly(x, 2), data = df)
+  linear <- lm(y ~ x, data = df)
+  
+  
+  # Testing Parameters 
+  n = 10000
+  
+  # New test data
+  x_test = X(n)
+  eps_test = epsilon(n, sigma = sigma)
+  y_test = Y(x_test, eps_test)
+  
+  # Create a test data frame
+  test <- data.frame(x = x_test, y = y_test)
+  
+  # Calculate the estimated MSE for each model
+  yhat_cubic <- predict(cubic, newdata = test)
+  yhat_quadratic <- predict(quadratic, newdata = test)
+  yhat_linear <- predict(linear, newdata = test)
+  
+  # Create an MSE Table to print
+  mse <- data.frame(Model = c("cubic", "quadratic", "linear"), 
+                    `Testing MSE` = c(mean((test$y - yhat_cubic)^ 2), 
+                                      mean((test$y - yhat_quadratic) ^ 2), 
+                                      mean((test$y - yhat_linear) ^ 2)),
+                    Run = i)
+  # Store the MSE Table in the designated list
+  output[[i]] <- mse
+}
+
+# Convert list to data frame
+output <- bind_rows(output) 
+
+# Create the Density Plot for Each Model Testing MSE
+ggplot(data = output, aes(x = Testing.MSE, color = Model)) +
+  geom_density(alpha=.5)
+```
+
+</div>
+
+g. Show a count of how many times each model was the best. That is, out of the 100 simulations, count how many times each model had the lowest MSE.
+
+<div class="solution">
+```{r 1.1 g}
+# Count of how many times each model was the best
+output %>% 
+  group_by(Run) %>% 
+  summarise(Testing.MSE = min(Testing.MSE)) %>% 
+  left_join(output, by = c('Run', "Testing.MSE")) %>% 
+  group_by(Model) %>% 
+  summarise(Count = n())
+```
+
+</div>
+
+
+h. Repeat the simulation in part *g*, but use $\sigma=2$. Report the number of times each model was best (you do not need to produce any plots). Use the same `set.seed(613)` prior to running the simulation and do not set the seed in any other places.
+
+<div class="solution">
+```{r 1.1 h}
+# Set Seed
+set.seed(613)
+
+# New sigma value 
+sigma = 2
+
+# Create a empty list to store output
+output <- list()
+
+for (i in 1:100) {
+  # Training Parameters
+  n = 100
+  
+  # Distributions 
+  X_dist <- X(n)
+  Eps_dist <- epsilon(n, sigma = sigma)
+  Y_dist <- Y(x = X_dist, error = Eps_dist)
+  
+  # Create a Data Frame for graphing
+  df <- data.frame(x = X_dist, y = Y_dist)
+  
+  # Re-run modeling with new training data
+  cubic <- lm(y ~ poly(x, 3), data = df)
+  quadratic <- lm(y ~ poly(x, 2), data = df)
+  linear <- lm(y ~ x, data = df)
+  
+  
+  # Testing Parameters 
+  n = 10000
+  
+  # New test data
+  x_test = X(n)
+  eps_test = epsilon(n, sigma = sigma)
+  y_test = Y(x_test, eps_test)
+  
+  # Create a test data frame
+  test <- data.frame(x = x_test, y = y_test)
+  
+  # Calculate the estimated MSE for each model
+  yhat_cubic <- predict(cubic, newdata = test)
+  yhat_quadratic <- predict(quadratic, newdata = test)
+  yhat_linear <- predict(linear, newdata = test)
+  
+  # Create an MSE Table to print
+  mse <- data.frame(Model = c("cubic", "quadratic", "linear"), 
+                    `Testing MSE` = c(mean((test$y - yhat_cubic)^ 2), 
+                                      mean((test$y - yhat_quadratic) ^ 2), 
+                                      mean((test$y - yhat_linear) ^ 2)),
+                    Run = i)
+  # Store the MSE Table in the designated list
+  output[[i]] <- mse
+}
+
+# Convert list to data frame
+output <- bind_rows(output) 
+
+# Count of how many times each model was the best
+output %>% 
+  group_by(Run) %>% 
+  summarise(Testing.MSE = min(Testing.MSE)) %>% 
+  left_join(output, by = c('Run', "Testing.MSE")) %>% 
+  group_by(Model) %>% 
+  summarise(Count = n())
+
+```
+
+</div>
+
+i. Repeat *g*, but now use $\sigma=4$ and $n=200$. 
+
+<div class="solution">
+```{r 1.1 i}
+# Set Seed
+set.seed(613)
+
+# New sigma value 
+sigma = 4
+
+# Create a empty list to store output
+output <- list()
+
+for (i in 1:100) {
+  # Training Parameters
+  n = 200
+  
+  # Distributions 
+  X_dist <- X(n)
+  Eps_dist <- epsilon(n, sigma = sigma)
+  Y_dist <- Y(x = X_dist, error = Eps_dist)
+  
+  # Create a Data Frame for graphing
+  df <- data.frame(x = X_dist, y = Y_dist)
+  
+  # Re-run modeling with new training data
+  cubic <- lm(y ~ poly(x, 3), data = df)
+  quadratic <- lm(y ~ poly(x, 2), data = df)
+  linear <- lm(y ~ x, data = df)
+  
+  
+  # Testing Parameters 
+  n = 10000
+  
+  # New test data
+  x_test = X(n)
+  eps_test = epsilon(n, sigma = sigma)
+  y_test = Y(x_test, eps_test)
+  
+  # Create a test data frame
+  test <- data.frame(x = x_test, y = y_test)
+  
+  # Calculate the estimated MSE for each model
+  yhat_cubic <- predict(cubic, newdata = test)
+  yhat_quadratic <- predict(quadratic, newdata = test)
+  yhat_linear <- predict(linear, newdata = test)
+  
+  # Create an MSE Table to print
+  mse <- data.frame(Model = c("cubic", "quadratic", "linear"), 
+                    `Testing MSE` = c(mean((test$y - yhat_cubic)^ 2), 
+                                      mean((test$y - yhat_quadratic) ^ 2), 
+                                      mean((test$y - yhat_linear) ^ 2)),
+                    Run = i)
+  # Store the MSE Table in the designated list
+  output[[i]] <- mse
+}
+
+# Convert list to data frame
+output <- bind_rows(output)
+
+# Count of how many times each model was the best
+output %>% 
+  group_by(Run) %>% 
+  summarise(Testing.MSE = min(Testing.MSE)) %>% 
+  left_join(output, by = c('Run', "Testing.MSE")) %>% 
+  group_by(Model) %>% 
+  summarise(Count = n())
+```
+
+</div>
+
+j. Describe the effects $\sigma$ and $n$ has on selection of the best model? Why is the *true* model form (i.e., quadratic) not always the *best* model to use when prediction is the goal? 
+
+<div class="solution">
+
+- From part (h), we know that when reducing the value of $\sigma$, the number of times that quadratic model wins increases. It is telling us that when the variability of the training and testing data decreases, our simulation tends to agree more with the true regression setting. When we increase $\sigma$ and training sample size $n$ at the same time, we are increasing the variability, but we have more training data to fit the model as well. In this case, we see that, even though the variability increases, more training data helps the quadratic model to win 67% of the time. This is telling us that the more training data we have, it is more likely that our simulation tends to agree more with the true regression setting, even with a lot of variability in the data.
+- The reason why the true model does not always win is mainly because of the irreducible error term $\epsilon$. $\epsilon$ introduces a lot of variability into the training and testing data, so the final distribution of the training and testing data can vary dramatically from the true regression line, as we can see in the first scatterplot above. Therefore, for some occasions, quadratic form may not be the best model, comparing to linear and cubic models.
+
+</div>
+
+
+
+
+
+

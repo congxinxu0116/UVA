@@ -1,0 +1,359 @@
+---
+title: 'Homework #3'
+---
+#### Congxin (David) Xu
+#### Computing ID: cx2rx
+
+
+**SYS 6018 | Fall 2020 | University of Virginia **
+
+*******************************************
+
+<!--- Below are global settings for knitr. You can override any of them by adding the changes to individual chunks --->
+
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(error=TRUE,        # Keep compiling upon error
+                      collapse=FALSE,    # collapse by default
+                      echo=TRUE,         # echo code by default
+                      comment = "#>",    # change comment character
+                      fig.width = 5,     # set figure width
+                      fig.align = "center",# set figure position
+                      out.width = "49%", # set width of displayed images
+                      warning=FALSE,     # do not show R warnings
+                      message=FALSE)     # do not show R messages
+options(dplyr.summarise.inform = FALSE)  # ignore message about group structure
+
+```
+
+<!--- Solution Region --->
+```{css solution-region, echo=FALSE}
+.solution {
+  background-color: #232D4B10;
+  border-style: solid;
+  border-color: #232D4B;
+  padding: .5em;
+  margin: 20px
+}
+```
+
+
+<!--- Load Required R packages here --->
+```{r packages, include=FALSE}
+#- Better table printing
+library(kableExtra) # https://haozhu233.github.io/kableExtra/awesome_table_in_html.html
+format_table <- function(x, nmax=10) {
+  kable(x) %>% 
+    kable_styling(full_width = FALSE, font_size=11, position = "left") %>% 
+    {if(nrow(x) > nmax) scroll_box(., width = "100%", height = "200px") else .}
+}
+#- useful functions
+digits <- function(x, k=2) format(round(x, k), nsmall=k)
+#- data directory
+data.dir = 'https://mdporter.github.io/SYS6018/data/'
+#- required functions
+library(tidyverse)
+library(glmnet)
+library(mlbench)
+library(caret)
+```
+
+
+
+### Problem 3.1: Optimal Tuning Parameters
+
+In cross-validation, we discussed choosing the tuning parameter values that minimized the cross-validation error. Another approach, called the "one-standard error" rule [ISL pg 214, ESL pg 61], uses the values corresponding to the least complex model whose cv error is within one standard error of the best model. The goal of this assignment is to compare these two rules.
+
+Use simulated data from `mlbench.friedman1(., sd=2)` in the `mlbench` R package and fit *lasso models*. The tuning parameter $\lambda$ (corresponding to the penalty on the coefficient magnitude) is the one we will focus one. Generate training data, use k-fold cross-validation to get $\lambda_{\rm min}$ and $\lambda_{\rm 1SE}$, generate test data, make predictions for the test data, and compare performance of the two rules under a squared error loss using a hypothesis test.  
+
+Choose reasonable values for:
+
+- Number of cv folds ($K$) 
+    - Note: you are free to use repeated CV, repeated hold-outs, or bootstrapping instead of plain cross-validation; just be sure to describe what do did so it will be easier to grade.
+- Number of training and test observations
+- Number of simulations
+- If everyone uses different values, we will be able to see how the results change over the different settings.
+- Don't forget to make your results reproducible (e.g., set seed)
+
+This pseudo code will get you started:
+```yaml
+library(mlbench)
+library(glmnet)
+
+#-- Settings
+n.train =        # number of training obs
+n.test =         # number of test obs
+K =              # number of CV folds
+alpha =          # glmnet tuning alpha (1 = lasso, 0 = ridge)
+M =              # number of simulations
+
+#-- Data Generating Function
+getData <- function(n) mlbench.friedman1(n, sd=2) # data generating function
+
+#-- Simulations
+# Set Seed Here
+
+for(m in 1:M) {
+
+# 1. Generate Training Data
+# 2. Build Training Model using cross-validation, e.g., cv.glmnet()
+# 3. get lambda that minimizes cv error and 1 SE rule
+# 4. Generate Test Data
+# 5. Predict y values for test data (for each model)
+# 6. Evaluate predictions
+
+}
+
+#-- Compare
+# compare performance of the approaches / Statistical Test
+```
+
+
+a. Code for the simulation and performance results
+
+
+<div class="solution">
+
+```{r 3.1 a}
+
+# Pre-Defined Parameters
+n.train = 800        # number of training obs
+n.test = 200         # number of test obs
+K = 10               # number of CV folds
+alpha = 1            # glmnet tuning alpha (1 = lasso, 0 = ridge)
+M = 200              # number of simulation
+
+# Data generating function  
+getData <- function(n) mlbench.friedman1(n, sd=2) 
+
+# Randomness Control
+set.seed(666)
+
+# Create a empty list to store results
+output <- list()
+
+# Simulation
+for (m in 1:M) {
+  # Create training data
+  train <- getData(n.train)
+  
+  # Build model using CV 
+  model <- cv.glmnet(x = train$x, y = train$y, nfolds = K, alpha = alpha)
+  
+  # Get lambda that minimizes cv error and 1 SE rule
+  lambda.min <- model$lambda.min
+  lambda.1se <- model$lambda.1se
+  
+  # Create testing data
+  test <- getData(n.test)
+
+  # Predict y values for test data 
+  prediction.lmin <- predict(model, newx = test$x, s = 'lambda.min')
+  prediction.l1se <- predict(model, newx = test$x, s = 'lambda.1se')
+
+  # Evaluate Predictions
+  mse.lmin <- mean((test$y - prediction.lmin)^2)
+  mse.l1se <- mean((test$y - prediction.l1se)^2)
+  
+  # Store the data into output
+  output[[m]] <- data.frame(Run = m, 
+                            lambda.min = lambda.min, 
+                            lambda.1se = lambda.1se,
+                            # prediction.lmin = prediction.lmin[,1],
+                            # prediction.l1se = prediction.l1se[,1], 
+                            mse.lmin = mse.lmin,
+                            mse.l1se = mse.l1se)
+  
+}
+
+# Convert list back to data frame
+output <- bind_rows(output)
+
+head(output)
+```
+
+
+</div>
+
+
+
+
+b. Description and results of a hypothesis test comparing $\lambda_{\rm min}$ and $\lambda_{\rm 1SE}$.
+
+<div class="solution">
+Since we want to study the performance difference between a model using $\lambda_{min}$ a model using $\lambda_{1SE}$, we are going to conduct a **two-sample t test**. 
+
+
+- The Null Hypothesis will be: $H_0: \mu_{min} \leq \mu_{1SE}$
+- The Alternative Hypothesis will be: $H_a: \mu_{min} > \mu_{1SE}$
+
+Test statistic will be 
+$$ T = \frac{\bar{Y}_{1SE} - \bar{Y}_{min}}{\sqrt{s^2_{min} / N_{min} + s^2_{1SE} / N_{1SE}}}  $$
+
+```{r 3.1 b}
+# Calculate different values:
+y_bar_1se <- mean(output$mse.l1se)
+y_bar_min <- mean(output$mse.lmin)
+
+sd_min <- sd(output$mse.lmin)
+sd_1se <- sd(output$mse.l1se)
+
+# Calculate the t score
+t_score = (y_bar_1se - y_bar_min)/sqrt(sd_min^2 / nrow(output) +  sd_1se^2 / nrow(output))
+print(t_score)
+
+# Assume 95% confidence level
+alpha <- 0.05
+
+# Calculate critical t value
+t_critical <- qt(0.95, df = nrow(output)*2 - 2)
+print(t_critical)
+```
+
+Based on our calculation above, we know that our $t = 4.66089$ and the critical value $t^* = 1.648691$. Using the critical value approach, we know that since $t > t^*$, at 5% significance level, we can reject our null hypothesis and conclude that the model with $\lambda_{1SE}$ performs better than the model with $\lambda_{min}$ on this simulated test data.
+
+</div>
+
+
+```{r, include=FALSE}
+# Clear the memory and garbage collection
+rm(list=ls())
+gc()
+```
+
+
+<!--
+------------------------------------------------------------------------------
+Applied: ridge regression, tuning parameter optimization, GCV and LOOCV based selection, model.matrix() to deal with categorical
+-->
+
+### Problem 3.2 Prediction Contest: Real Estate Pricing
+
+
+This problem uses the [realestate-train](https://mdporter.github.io/SYS6018/data/realestate-train.csv) and [realestate-test](https://mdporter.github.io/SYS6018/data/realestate-test.csv) (click on links for data). 
+
+The goal of this contest is to predict sale price (in thousands) (`price` column) using an *elastic net* model. Evaluation of the test data will be based on the root mean squared error ${\rm RMSE}= \sqrt{\frac{1}{m}\sum_i (y_i - \hat{y}_i)^2}$ for the $m$ test set observations. 
+
+
+a. Use an *elastic net* model to predict the `price` of the test data. Submit a .csv file (ensure comma separated format) named `lastname_firstname.csv` that includes the column named *yhat* that is your estimates. We will use automated evaluation, so the format must be exact. 
+    - You are free to use any tuning parameters
+    - You are free to use any data transformation or feature engineering
+    - You will receive credit for a proper submission; the top five scores will receive 2 bonus points.     
+    
+<div class="solution">
+
+Please see **Part e** for final model prediction and writing out the CSV file.
+
+</div>    
+    
+    
+b. Show the code you used to transform the data. Note: there are some categorical predictors so at the least you will have to convert those to something numeric (e.g., one-hot or dummy coding). 
+
+<div class="solution">
+
+```{r 3.2 b, message=FALSE}
+# Read in the data
+train <- read_csv("realestate-train.csv")
+test <- read_csv("realestate-test.csv")
+
+# Create one-hot encoding for train and test
+dmy <- dummyVars(" ~ .", data = train)
+train <- data.frame(predict(dmy, newdata = train))
+
+dmy <- dummyVars(" ~ .", data = test)
+test <- data.frame(predict(dmy, newdata = test))
+
+# Define Training data 
+X.train = train %>% select(-price) %>% as.matrix()
+Y.train = train %>% select(price) %>% as.matrix()
+```
+
+
+</div>
+
+
+
+c. Report the $\alpha$ and $\lambda$ parameters you used to make your final predictions. Describe how you choose those tuning parameters and show supporting code. 
+
+
+
+<div class="solution">
+
+I am going to run 101 values of $\alpha$ from 0 to 1 and find the best $\alpha$ value with the lowest Mean Square Error. Once I find the best $\alpha$, I will also be able to find the corresponding $\lambda$. In Part 3.1 b, the hypothesis test has indicated that, model with $\lambda_{1SE}$ will have better performance. Therefore, I am going to use $\lambda = \lambda_{1SE}$ in this model.
+
+```{r 3.2 c}
+# Control Randomness
+set.seed(666) 
+
+# Cross Validation Setting
+n.folds <- 5
+fold <- sample(rep(1:n.folds, length = nrow(X.train)))
+
+# Pre-defined setting
+alpha <- seq(0, 1, 0.01)
+
+# Create a empty list to store results
+output <- list()
+
+# Finding the best alpha
+for (m in 1:length(alpha)) {
+
+    # Build model using CV 
+    model <- cv.glmnet(x = X.train, y = Y.train, foldid = fold, alpha = alpha[m])
+    
+    # Store the data into output
+    output[[m]] <- data.frame(alpha = alpha[m], 
+                              lambda = model$lambda.1se,
+                              mse = model$cvm[which(model$lambda == model$lambda.1se)])
+  
+}
+
+# Convert list back to data frame
+output <- bind_rows(output)
+
+# Report alpha and lambda for final prediction
+output %>% 
+  filter(mse == min(mse))
+```
+
+For the final model prediction, I am going to use $\alpha = 0.71$ and $\lambda = 3.523955$.
+</div>
+
+
+
+d. Report the anticipated performance of your method in terms of RMSE. We will see how close your performance assessment matches the actual value. 
+
+<div class="solution">
+
+```{r, 3.2 d}
+# Convert MSE to RMSE
+best <- output %>% 
+  filter(mse == min(mse)) %>% 
+  mutate(rmse = sqrt(mse)) %>% 
+  select(-mse)
+best
+```
+The anticipated performance in terms of RMSE should be around 40.67234 based on my best setting for $\alpha$ and $\lambda$.
+
+</div>
+
+e. Generate the final model prediction and write out the CSV file for submission. 
+
+
+<div class="solution">
+
+```{r 3.2 e}
+# Re-run the model with alpha = 0.71
+final_model <- cv.glmnet(x = X.train, y = Y.train, foldid = fold, alpha = best$alpha)
+
+# Convert test data to matrix
+X.test <- test %>% as.matrix()
+
+# Make Predictions
+test$yhat <- predict(final_model, newx = X.test, s = 'lambda.1se')
+
+# Write out the CSV File
+write_csv(test, "congxin_xu.csv", col_names = T)
+
+```
+
+</div>

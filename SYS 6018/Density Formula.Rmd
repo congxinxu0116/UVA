@@ -1,0 +1,23 @@
+---
+title: "Untitled"
+author: "Congxin (David) Xu"
+date: "10/1/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Possion Distribution
+
+$$log(L) = \sum_{i = 1}^n (-\lambda + k_i log(\lambda) - log(k_i!))$$
+
+$$ \frac{d logL}{d\lambda} = -n + \frac{\sum k_i}{\lambda} = 0 $$
+
+$$ n = \frac{\sum k_i}{\lambda}, \lambda = \frac{\sum k_i}{n} = E(x)$$
+
+## Gaussian
+
+$$ \hat{\mu} = \frac{1}{n} \sum_{i = 1}^n X_i = \bar{x}$$
+$$\hat{\sigma} = \sqrt{\frac{1}{n} \sum_{i = 1}^n (X_i - \bar{x})^2} $$

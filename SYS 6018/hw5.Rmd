@@ -1,0 +1,278 @@
+---
+title: 'Homework #5'
+---
+#### Congxin (David) Xu
+#### Computing ID: cx2rx
+
+**SYS 6018 | Fall 2020 | University of Virginia **
+
+*******************************************
+
+<!--- Below are global settings for knitr. You can override any of them by adding the changes to individual chunks --->
+
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(error=TRUE,        # Keep compiling upon error
+                      collapse=FALSE,    # collapse by default
+                      echo=TRUE,         # echo code by default
+                      comment = "#>",    # change comment character
+                      fig.width = 5,     # set figure width
+                      fig.align = "center",# set figure position
+                      out.width = "49%", # set width of displayed images
+                      warning=TRUE,      # show R warnings
+                      message=TRUE)      # show R messages
+options(dplyr.summarise.inform = FALSE)  # ignore message about group structure
+```
+
+<!--- Solution Region --->
+```{css solution-region, echo=FALSE}
+.solution {
+  background-color: #232D4B10;
+  border-style: solid;
+  border-color: #232D4B;
+  padding: .5em;
+  margin: 20px
+}
+```
+
+
+<!--- Load Required R packages here --->
+```{r packages, include=FALSE}
+#- Better table printing
+library(kableExtra) # https://haozhu233.github.io/kableExtra/awesome_table_in_html.html
+format_table <- function(x, nmax=10) {
+  kable(x) %>% 
+    kable_styling(full_width = FALSE, font_size=11, position = "left") %>% 
+    {if(nrow(x) > nmax) scroll_box(., width = "100%", height = "200px") else .}
+}
+#- useful functions
+digits <- function(x, k=2) format(round(x, k), nsmall=k)
+#- data directory
+data.dir = 'https://mdporter.github.io/SYS6018/data/'
+#- required functions
+library(tidyverse)
+library(glmnet)
+library(ks)
+```
+
+
+
+
+### Problem 5.1 Geographic Profiling
+
+```{r, echo=FALSE, eval=FALSE}
+set.seed(2019)
+n = 283
+sd = 2.1
+x = sqrt(rnorm(n, sd=sd)^2 + rnorm(n, sd=sd)^2)
+
+readr::write_csv(tibble(x), "../data/geo_profile.csv", col_names=FALSE)
+#hist(x, 15)
+
+```
+
+Geographic profiling, a method developed in criminology, can be used to estimate the [home location (roost) of animals](https://www.sciencedirect.com/science/article/pii/S0022519305004157) based on a collection of sightings. The approach requires an estimate of the distribution the animal will travel from their roost to forage for food. 
+
+A sample of $283$ distances that pipistrelle bats traveled (in meters) from their roost can be found at: 
+<https://mdporter.github.io/SYS6018/data/geo_profile.csv>
+
+
+One probability model for the distance these bats will travel is:
+\begin{align*}
+f(x; \theta) = \frac{x}{\theta} \exp \left( - \frac{x^2}{2 \theta} \right)
+\end{align*}
+where the parameter $\theta > 0$ controls how far they are willing to travel. 
+
+
+a. Derive the MLE for $\theta$ (i.e., show the math). 
+
+<div class="solution"> 
+Given the probability model function, we can first derive the Log-Likelihood function
+$$ \begin{aligned}
+log L(\theta) & = \sum_{i = 1}^{n} log f(x_i; \theta) \\
+& = \sum_{i = 1}^{n} log \left[ \frac{x_i}{\theta} \exp \left( - \frac{x_i^2}{2 \theta} \right)\right]\\
+& = \sum_{i = 1}^{n} log (\frac{x_i}{\theta}) - \frac{x_i^2}{2 \theta} \\
+& = \sum_{i = 1}^{n} log(x_i) - log(\theta) - \frac{1}{2}x_i^2 \times \theta^{-1} \\
+\end{aligned}$$
+
+In order to find the $\theta$ that maximize the likelihood function, we are going to take a partial derivative of $\theta$ and set that equation to be zero.
+
+$$ \frac{d log(L)}{d\theta} = - \frac{n}{\theta} + \sum_{i = 1}^{n} \frac{1}{2}x_i^2 \frac{1}{\theta^2} = 0$$
+Therefore, we can get:
+$$\sum_{i = 1}^{n} \frac{1}{2}x_i^2 \frac{1}{\theta^2} =  \frac{n}{\theta}$$
+Since $\theta > 0$, we let both sides of the equation times $\theta^2$
+$$\sum_{i = 1}^{n} \frac{1}{2}x_i^2 =  n\theta \Rightarrow \theta = \frac{1}{n} \sum_{i = 1}^{n} \frac{1}{2}x_i^2 $$
+</div>
+
+
+
+b. What is the MLE of $\theta$ for the bat data? (Use results from a, or use computational methods.) 
+
+<div class="solution"> 
+```{r Problem 5.1 b, message=FALSE}
+# Read in the data
+data <- read_csv("https://mdporter.github.io/SYS6018/data/geo_profile.csv", col_names = F)
+
+# Calculate theta
+theta <- mean(0.5 * (data$X1)^2)
+print(theta)
+```
+
+</div>
+
+
+
+c. Using the MLE value of $\theta$ from part b, compute the estimated density of this distribution at a set of evaluation points between 0 and 8 meters. Plot the estimated density.
+
+<div class="solution"> 
+```{r Problem 5.1 c}
+# Create a data frame to store the values
+estimated_density <- data.frame(eval = seq(0, 8, 0.05)) %>% 
+  mutate(fit =  eval / theta * exp(- eval^2 / (2* theta)))
+# Create the density plot
+ggplot() + 
+  geom_point(data = estimated_density, aes(x = eval, y = fit))
+```
+
+</div>
+
+
+
+d. Estimate the density using KDE. Report the bandwidth you chose and produce a plot of the estimated density. 
+
+
+<div class="solution"> 
+
+```{r Problem 5.1 d}
+# Running the KDE model
+model_kde <- kde(data$X1)
+
+# Report the bandwidth - h
+model_kde$h
+
+# Create a plot of the estimated density
+plot(model_kde)
+```
+
+
+</div>
+
+
+
+e. Which model do you prefer, the parametric or KDE? 
+
+<div class="solution"> 
+
+I prefer KDE. Clearly, parametric approach gives us the exact density shape once we find the optimal $\theta$. However, without doing any calculus, we can find an reasonably good density estimation using KDE very quickly. 
+
+</div>
+
+
+
+
+
+### Problem 5.2: Interstate Crash Density
+
+Interstate 64 (I-64) is a major east-west road that passes just south of Charlottesville. Where and when are the most dangerous places/times to be on I-64? The crash data (link below) gives the mile marker and fractional time-of-week for crashes that occurred on I-64 between mile marker 87 and 136 in 2016. The time-of-week data takes a numeric value of *\<dow\>.\<hour/24\>*, where the dow starts at 0 for Sunday (6 for Sat) and the decimal gives the time of day information. Thus `time=0.0417` corresponds to Sun at 1am and `time=6.5` corresponds to Sat at noon). 
+
+- **Crash Data**: <https://mdporter.github.io/SYS6018/data/crashes16.csv>
+
+
+a. Extract the crashes and make a scatter plot with mile marker on x-axis and time on y-axis. 
+
+
+<div class="solution"> 
+
+```{r Problem 5.2, message=FALSE}
+# Read in the data
+data <- read_csv("https://mdporter.github.io/SYS6018/data/crashes16.csv")
+# Create the scatter plot
+ggplot() + geom_point(data = data, aes(x = mile, y = time))
+```
+
+
+</div>
+
+
+
+b. Use KDE to estimate the *mile marker* density. Report the bandwidth and plot the density estimate. 
+
+<div class="solution"> 
+```{r Problem 5.2 b}
+# Running the KDE model
+model_kde <- kde(data$mile)
+
+# Report the bandwidth - h
+model_kde$h
+
+# Create a plot of the estimated density
+plot(model_kde)
+```
+
+</div>
+
+
+c. Use KDE to estimate the temporal *time-of-week* density. Report the bandwidth and plot the density estimate. 
+
+<div class="solution"> 
+```{r Problem 5.2 c}
+# Running the KDE model
+model_kde <- kde(data$time)
+
+# Report the bandwidth - h
+model_kde$h
+
+# Create a plot of the estimated density
+plot(model_kde)
+```
+</div>
+
+
+
+d. Use KDE to estimate the bivariate mile-time density. What are the bandwidth parameters? Plot the bivariate density estimate. 
+
+
+<div class="solution"> 
+```{r Problem 5.2 d}
+# Smoothed cross-validation bw estimator
+H = Hscv(data)
+
+# Running the KDE model
+model_kde <- kde(data, H = H)
+
+# Report the bandwidth parameters - H
+model_kde$H
+
+# Create a plot of the estimated density
+plot(model_kde, xlim = c(87, 136), ylim = c(0, 7))
+points(data, pch = 19, cex = .5, col = 'grey60')
+grid() 
+```
+</div>
+
+
+e. Based on the estimated density, approximate the most dangerous mile marker and time-of-week. 
+
+<div class="solution"> 
+Approach 1: Using the Contour Plot and abline: 
+```{r Problem 5.2 e}
+# Re draw the contour plot with 1%, 2%, 5%, 10% and 25% confidence interval
+plot(model_kde, cont = c(1, 2, 5, 10, 25), xlim = c(87, 136), ylim = c(0, 7))
+abline(h = 1.75, v = 116.7, untf = FALSE)
+```
+Based on the contour plot with 1% confidence interval and the abline on the contour plot, I am able to locate the most dangerous mile marker and time-of-week and they are **mile marker 116.7 and time-of-week 1.75 (Monday, 6 PM)**.
+
+
+Approach 2: Another approach for this is to find the maximum estimated density for the particular mile marker and time-of-week:
+```{r Problem 5.2 e Part 2}
+est <- model_kde$estimate
+index <- which(est == max(est), arr.ind = TRUE)
+
+# The most dangerous mile marker is 
+model_kde$eval.points[[1]][index[1]]
+
+# The most dangerous time-of-week is 
+model_kde$eval.points[[2]][index[2]]
+```
+Using this approach, I am able to locate the most dangerous mile marker and time-of-week and they are **mile marker 116.7036 and time-of-week 1.768988 (Monday, 6:27 PM)**.
+</div>
+

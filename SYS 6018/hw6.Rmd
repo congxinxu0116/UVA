@@ -1,0 +1,343 @@
+---
+title: 'Homework #6'
+---
+#### Congxin (David) Xu
+#### Computing ID: cx2rx
+
+**SYS 6018 | Fall 2020 | University of Virginia **
+
+*******************************************
+
+
+<!--- Below are global settings for knitr. You can override any of them by adding the changes to individual chunks --->
+
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(error=TRUE,        # Keep compiling upon error
+                      collapse=FALSE,    # collapse by default
+                      echo=TRUE,         # echo code by default
+                      comment = "#>",    # change comment character
+                      fig.width = 5,     # set figure width
+                      fig.align = "center",# set figure position
+                      out.width = "49%", # set width of displayed images
+                      warning=TRUE,      # show R warnings
+                      message=TRUE)      # show R messages
+options(dplyr.summarise.inform = FALSE)  # ignore message about group structure
+```
+
+<!--- Solution Region --->
+```{css solution-region, echo=FALSE}
+.solution {
+  background-color: #232D4B10;
+  border-style: solid;
+  border-color: #232D4B;
+  padding: .5em;
+  margin: 20px
+}
+```
+
+
+<!--- Load Required R packages here --->
+```{r packages, include=FALSE}
+#- Better table printing
+library(kableExtra) # https://haozhu233.github.io/kableExtra/awesome_table_in_html.html
+format_table <- function(x, nmax=10) {
+  kable(x) %>% 
+    kable_styling(full_width = FALSE, font_size=11, position = "left") %>% 
+    {if(nrow(x) > nmax) scroll_box(., width = "100%", height = "200px") else .}
+}
+#- useful functions
+digits <- function(x, k=2) format(round(x, k), nsmall=k)
+#- data directory
+data.dir = 'https://mdporter.github.io/SYS6018/data/'
+library(tidyverse)
+library(mclust)
+library(mixtools)
+```
+
+
+
+### Problem 6.1: Customer Segmentation with RFM (Recency, Frequency, and Monetary Value)
+
+RFM analysis is an approach that some businesses use to understand their customers' activities. At any point in time, a company can measure how recently a customer purchased a product (Recency), how many times they purchased a product (Frequency), and how much they have spent (Monetary Value). There are many ad-hoc attempts to segment/cluster customers based on the RFM scores (e.g., here is one based on using the customers' rank of each dimension independently: <https://joaocorreia.io/blog/rfm-analysis-increase-sales-by-segmenting-your-customers.html>). In this problem you will use the clustering methods we covered in class to segment the customers. 
+
+
+The data for this problem can be found here: <https://mdporter.github.io/SYS6018/data/RFM.csv>. Cluster based on the Recency, Frequency, and Monetary value columns.
+
+a. Implement hierarchical clustering. 
+    - Describe any pre-processing steps you took (e.g., scaling, distance metric)
+    - State the linkage method you used with justification. 
+    - Show the resulting dendrogram
+    - State the number of segments/clusters you used with justification. 
+    - Using your segmentation, are customers 1 and 100 in the same cluster?     
+    
+<div class="solution"> 
+The first step is to read in the data and preview it
+```{r Problem 6.1 a preview, message=FALSE}
+data <- read_csv("https://mdporter.github.io/SYS6018/data/RFM.csv")
+head(data)
+```
+The next step is to study the distribution of each column:
+```{r Problem 6.1 a summary}
+summary(data)
+```
+We can clearly see that Recency, Frequency and Monetary has very different distributions in terms of the mean values of each column. Therefore, I am going to **scale** them before running the hierarchical cluster analysis. After scaling, I am also going to calculate the pairwise **euclidean** distance for each observations.
+
+```{r  Problem 6.1 a cluster}
+# Set seed
+set.seed(666)
+
+# Scale the features
+X <- data %>% 
+  select(-id) %>% 
+  scale()
+
+# Calculate Distance (dissimilarity matrix)
+dX <- dist(X, method = "euclidean")
+
+# Run hierarchical clustering
+hc <- hclust(dX, method = "centroid")
+```
+Here I am using the **Centroid Linkage** method to measure the dissimilarity because this is a default approach in hierarchical cluster analysis when we do not have a lot of information about the data we are working with. 
+
+```{r Problem 6.1 a dendro}
+plot(as.dendrogram(hc), leaflab = "none")
+rect.hclust(hc, 9, border = "red")
+```
+After viewing the dendrogram above, we have pretty a good idea about the shape of the tree. Now, we are going to use the "elbow method" to determine the number of clusters for this cluster analysis:
+```{r Problem 6.1 a num of cluster}
+tibble(height = hc$height, K = row_number(-height)) %>% 
+  ggplot(aes(K, height)) + 
+  geom_line() + 
+  geom_point(aes(color = ifelse(K == 9, "red", "black"))) +
+  scale_color_identity() + 
+  coord_cartesian(xlim=c(1, 50))
+```
+Based on the "elbow method", I am going to assign 9 customer segments (clusters) to this dataset. 
+```{r Problem 6.1 a membership}
+# Extract cluster membership
+yhat <- cutree(hc, k = 9)
+
+# Check if customer 1 and customer 100 are in the same cluster
+yhat[1] == yhat[100]
+```
+
+Based on my segmentation, customer 1 and customer 100 are in the same cluster.
+
+
+</div>
+
+
+b. Implement k-means.  
+    - Describe any pre-processing steps you took (e.g., scaling)
+    - State the number of segments/clusters you used with justification. 
+    - Using your segmentation, are customers 1 and 100 in the same cluster?     
+    
+<div class="solution"> 
+Similar to what I did in hierarchical clustering, I am also going to use the `scale` function to scale the data and then run `kmeans` with multiple K values to figure out the best $K$.
+```{r Problem 6.1 b clustering, warning=FALSE}
+# Set seed
+set.seed(666)
+
+# Scale the features
+X <- data %>% 
+  select(-id) %>% 
+  scale()
+
+# Run Kmeans for multiple k
+Kmax = 20
+SSE = numeric(Kmax)
+
+for (k in 1:Kmax) {
+  km <- kmeans(X, centers = k, nstart = 25)
+  SSE[k] = km$tot.withinss
+}
+
+# Plot the results
+plot(1:Kmax, SSE, type = 'o', las = 1, xlab = "K")
+title("K-means for Customer Segmentation with RFM")
+points(x = 6, y = SSE[6], col = 'red')
+```
+Based on the "elbow method", I am going to assign 6 customer segments (clusters) to this dataset using the Kmeans clustering.
+
+```{r Problem 6.1 b Refit}
+km <- kmeans(X, centers = 6, nstart = 25)
+km$cluster[1] == km$cluster[100]
+```
+Based on my segmentation, customer 1 and customer 100 are **not** in the same cluster.
+
+</div>
+
+
+
+c. Implement model-based clustering
+    - Describe any pre-processing steps you took (e.g., scaling)
+    - State the number of segments/clusters you used with justification. 
+    - Describe the best model. What restrictions are on the shape of the components?
+    - Using your segmentation, are customers 1 and 100 in the same cluster?     
+
+<div class="solution"> 
+Since we are going to implement model-based clustering, there is no need to do any pre-processing of the data.
+```{r Problem 6.1 c clustering}
+# Set seed
+set.seed(666)
+
+# Scale the features
+X <- data %>% 
+  select(-id) %>% 
+  as.matrix()
+
+# Fit series of models
+mix <- Mclust(X, verbose = F)
+
+# View the summary
+summary(mix)
+```
+
+- According to the summary information, we know that the model-based clustering generated **9** customer segments/constraints. 
+- `Mclust` function uses BIC to find the optimal model with largest BIC value and 9 is the best K value it found given all possible constraints. 
+- The best model has $K = 9$ with VVE constraints. 
+```{r Problem 6.1 c membership}
+mix$classification[1] == mix$classification[100] 
+```
+Based on my segmentation, customer 1 and customer 100 are **not** in the same cluster.
+
+</div>
+
+
+d. Discuss how you would cluster the customers if you had to do this for your job. Do you think one model would do better than the others? 
+
+<div class="solution"> 
+I think the model-based cluster is better than hierarchical clustering and Kmeans clustering because it has a lot of benefits in terms of model complexity, model constraints, and densities. 
+</div>
+
+
+### Problem 6.2: Poisson Mixture Model
+
+The pmf of a Poisson random variable is:
+\begin{align*}
+f_k(x; \lambda_k) = \frac{\lambda_k^x e^{-\lambda_k}}{x!}
+\end{align*}
+
+A two-component Poisson mixture model can be written:
+\begin{align*}
+f(x; \theta) = \pi \frac{\lambda_1^x e^{-\lambda_1}}{x!} + (1-\pi) \frac{\lambda_2^x e^{-\lambda_2}}{x!}
+\end{align*}
+
+
+
+a. What are the parameters of the model? 
+
+<div class="solution"> 
+
+The model parameters are $\pi$, $\lambda_1$ and $\lambda_2$.
+
+</div>
+
+b. Write down the log-likelihood for $n$ independent observations ($x_1, x_2, \ldots, x_n$). 
+
+<div class="solution"> 
+
+$$\begin{aligned}
+log L(\theta) & = \sum_{i = 1}^{n} log f(x_i; \theta) \\
+& = \sum_{i = 1}^{n} log \left[  \pi \frac{\lambda_1^x e^{-\lambda_1}}{x_i!} + (1-\pi) \frac{\lambda_2^x e^{-\lambda_2}}{x_i!} \right]
+\end{aligned}$$
+
+</div>
+
+c. Suppose we have initial values of the parameters. Write down the equation for updating the *responsibilities*. 
+
+<div class="solution"> 
+- Let $K \in \{1, 2\}$
+The responsibility $r_{ik}$ is:
+
+$$ \begin{aligned}
+r_{ik} & = Pr(g_i = k |D, \theta) \\
+& = \frac{P(D|g_i = k, \theta_k) \pi_k}{\sum_{j = 1}^K P(D|g_i = j, \theta_j) \pi_j} \\
+& = \frac{\frac{\lambda_k^x e^{-\lambda_k}}{x!} \pi}
+         {\pi \frac{\lambda_1^x e^{-\lambda_1}}{x!} + 
+          (1 - \pi) \frac{\lambda_2^x e^{-\lambda_2}}{x!}}
+\end{aligned}$$
+
+</div>
+
+
+
+d. Suppose we have responsibilities, $r_{ik}$ for all $i=1, 2, \ldots, n$ and $k=1,2$. Write down the equations for updating the parameters. 
+
+<div class="solution"> 
+
+$$\begin{aligned}
+r_{i1} = \frac{\frac{\lambda_1^x e^{-\lambda_1}}{x!} \pi}
+         {\pi \frac{\lambda_1^x e^{-\lambda_1}}{x!} + 
+          (1 - \pi) \frac{\lambda_2^x e^{-\lambda_2}}{x!}}
+\end{aligned}$$
+$$ \begin{aligned}
+r_{i2} & = \frac{\frac{\lambda_2^x e^{-\lambda_2}}{x!} (1 - \pi)}
+         {\pi \frac{\lambda_1^x e^{-\lambda_1}}{x!} + 
+          (1 - \pi) \frac{\lambda_2^x e^{-\lambda_2}}{x!}}
+\end{aligned}$$
+
+$$\pi =\frac{\sum_{i= 1}^n r_{i1}}{N}$$
+where $N$ is the number of observations.
+
+</div>
+
+
+e. Fit a two-component Poisson mixture model, report the estimated parameter values, and show a plot of the estimated mixture pmf for the following data:
+
+```{r, echo=TRUE}
+#-- Run this code to generate the data
+set.seed(123)             # set seed for reproducibility
+n = 200                   # sample size
+z = sample(1:2, size=n, replace=TRUE, prob=c(.25, .75)) # sample the latent class
+theta = c(8, 16)          # true parameters
+y = ifelse(z==1, rpois(n, lambda=theta[1]), rpois(n, lambda=theta[2]))
+```
+
+
+<div style="background-color:lightgrey; display: block; border-color: black; padding:1em">
+
+Note: The function `poisregmixEM()` in the R package `mixtools` is designed to estimate a mixture of *Poisson regression* models. We can still use this function for our problem of density estimation if it is recast as an intercept-only regression. To do so, set the $x$ argument (predictors) to `x = rep(1, length(y))` and `addintercept = FALSE`. 
+
+Look carefully at the output from this model. The `beta` values (regression coefficients) are on the log scale.
+
+</div>
+
+
+
+<div class="solution"> 
+
+```{r Problem 6.2 e}
+# Build the Poisson Mixture Model
+model <- poisregmixEM(y = y, x = rep(1, length(y)), addintercept = F)
+
+# Report the parameters
+summary(model)
+
+# Create a PMF for the Poison Mixture Model
+data.frame(x = 1:40, 
+           estimated = dpois(1:40, lambda = exp(model$beta[1]))*model$lambda[1] + 
+                       dpois(1:40, lambda = exp(model$beta[2]))*model$lambda[2]) %>% 
+  ggplot() + 
+    geom_line(aes(x = x, y = estimated, color = "Estimated")) + 
+    ggtitle("Estimated Mixture PMF")
+
+```
+The model parameters are $\pi_1 = 0.271686$, $\pi_2 = 0.728314$, $\lambda_1 = e^{2.064644} = 7.882491$ and $\lambda_2 = e^{2.781594} = 16.14473$
+
+</div>
+
+f. **2 pts Extra Credit**: Write a function that estimates this two-component mixture model using the EM approach. Show that it gives the same result as part *e*. 
+    - Note: you are not permitted to copy code.  Write everything from scratch and use comments to indicate how the code works (e.g., the E-step, M-step, initialization strategy, and convergence should be clear). 
+    - Cite any resources you consulted to help with the coding. 
+
+
+<div class="solution"> 
+
+Solution Goes Here
+
+</div>
+
+
+
+

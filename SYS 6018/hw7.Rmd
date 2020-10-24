@@ -1,0 +1,277 @@
+---
+title: 'Homework #7'
+---
+#### Congxin (David) Xu
+#### Computing ID: cx2rx
+
+**SYS 6018 | Fall 2020 | University of Virginia **
+
+*******************************************
+
+
+<!--- Below are global settings for knitr. You can override any of them by adding the changes to individual chunks --->
+
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(error=TRUE,        # Keep compiling upon error
+                      collapse=FALSE,    # collapse by default
+                      echo=TRUE,         # echo code by default
+                      comment = "#>",    # change comment character
+                      fig.width = 5,     # set figure width
+                      fig.align = "center",# set figure position
+                      out.width = "49%", # set width of displayed images
+                      warning=TRUE,      # show R warnings
+                      message=TRUE)      # show R messages
+options(dplyr.summarise.inform = FALSE)  # ignore message about group structure
+```
+
+<!--- Solution Region --->
+```{css solution-region, echo=FALSE}
+.solution {
+  background-color: #232D4B10;
+  border-style: solid;
+  border-color: #232D4B;
+  padding: .5em;
+  margin: 20px
+}
+```
+
+
+<!--- Load Required R packages here --->
+```{r packages, include=FALSE}
+#- Better table printing
+library(kableExtra) # https://haozhu233.github.io/kableExtra/awesome_table_in_html.html
+format_table <- function(x, nmax=10) {
+  kable(x) %>% 
+    kable_styling(full_width = FALSE, font_size=11, position = "left") %>% 
+    {if(nrow(x) > nmax) scroll_box(., width = "100%", height = "200px") else .}
+}
+#- useful functions
+digits <- function(x, k=2) format(round(x, k), nsmall=k)
+#- data directory
+data.dir = 'https://mdporter.github.io/SYS6018/data/'
+#- required functions here
+
+library(tidyverse)
+library(randomForest)
+```
+
+
+
+
+### Problem 7.1: Tree Splitting for classification
+
+Consider the Gini index, classification error, and entropy impurity measures in a simple classification setting with two classes. 
+
+Create a single plot that displays each of these quantities as a function of $p_m$, the estimated probability of an observation in node $m$ being from class 1. The x-axis should display $p_m$, ranging from 0 to 1, and the y-axis should display the value of the Gini index, classification error, and entropy.
+
+<div class="solution"> 
+
+```{r Problem 7.1}
+data.frame(p_m = seq(0.001, 0.999, 0.001)) %>% 
+  mutate(misclass_err = 1 - pmax(p_m, 1 - p_m),
+         gini = 2 * (p_m * (1 - p_m)),
+         cross_entropy = (p_m * log(1 / p_m)) + ((1 - p_m) * log(1 / (1 - p_m)))) %>% 
+  ggplot() +
+  geom_line(aes(x = p_m, y = misclass_err, color = "Misclassification Error")) + 
+  geom_line(aes(x = p_m, y = gini, color = "Gini Index")) + 
+  geom_line(aes(x = p_m, y = cross_entropy, color = "Cross-entropy")) + 
+  ylab("")
+```
+
+</div>
+
+
+
+### Problem 7.2: Combining bootstrap estimates
+
+```{r, echo=FALSE}
+p_red = c(0.2, 0.25, 0.3, 0.4, 0.4, 0.45, 0.7, 0.85, 0.9, 0.9)
+```
+
+Suppose we produce ten bootstrapped samples from a data set containing red and green classes. We then apply a classification tree to each bootstrapped sample and, for a specific value of $X$, produce the following 10 estimates of $\Pr(\text{Class is Red} \mid X)$: `r stringr::str_c(p_red, sep=", ")`
+
+a. ISLR 8.2 describes the *majority vote* approach for making a hard classification from a set of bagged classifiers. What is the final classification for this example using majority voting?
+
+<div class="solution"> 
+
+```{r Problem 7.2 a}
+# Vote for Class Red
+length(which(p_red > 0.5))
+
+# Vote for Class Green
+length(which(p_red <= 0.5))
+```
+I use 0.5 as the cut off value for the hard classification. Using the majority vote method, the final classification for this example is **Green**.
+
+</div>
+
+
+b. An alternative is to base the final classification on the average probability. What is the final classification for this example using average probability?
+
+
+<div class="solution"> 
+
+```{r Problem 7.2 b}
+mean(p_red)
+```
+If using 0.5 as the cut off value for the hard classification, Using the majority vote method, the final classification for this example is **Red**.
+
+</div>
+
+
+c. Suppose the cost of mis-classifying a Red class is twice as costly as mis-classifying a Green class. How would you modify both approaches to make better final classifications under these unequal costs? Report the final classifications. 
+
+
+<div class="solution"> 
+The cost of mis-classifying Red class is same as the benefit of classifying Red class. Therefore, we are doing to look at the total benefit in majority vote method: 
+```{r Problem 7.2 c part 1}
+# Define the benefit of each class
+benefit_red <- 2/3
+benefit_green <- 1/3
+
+# Using the majority vote method: 
+# Vote for Class Red
+length(which(p_red > 0.5)) * benefit_red
+
+# Vote for Class Green
+length(which(p_red <= 0.5)) * benefit_green
+```
+
+After incorporating the benefit of each class, we can see the using the majority vote method, we are going to choose class **Red** as the final classification because the total benefits of class Red is greater than the total benefit of class Green 
+
+For the average probability method, we can just change our threshold to reflect the unequal cost between Red and Green. In this scenario, the new threshold is going to be $1/3$, meaning that if the predicted probability is greater than $1/3$, we are going to classify it as Red. If not, we are going to classify it as Green. Given the average probability is 0.535, which is greater than $1/3$, the final classification using average probability method is **Red**.
+
+</div>
+
+
+
+### Problem 7.3: Random Forest Tuning
+
+Random forest has several tuning parameters that you will explore in this problem. We will use the `Boston` housing data from the `MASS` R package (See the ISLR Lab in section 8.3.3 for example code).
+
+- Note: remember that `MASS` can mask the `dplyr::select()` function.
+
+a. List all of the random forest tuning parameters in the `randomForest::randomForest()` function. Note any tuning parameters that are specific to classification or regression problems. Which tuning parameters do you think will be most important to search? 
+
+<div class="solution"> 
+
+- `ntree`: Number of trees to grow.
+- `mtry`:	Number of variables randomly sampled as candidates at each split.
+- `cutoff`:  A vector of length equal to number of classes. 
+- `sampsize`: Size(s) of sample to draw
+- `nodesize`: Minimum size of terminal nodes. 
+- `nPerm`: Number of times the OOB data are permuted per tree for assessing variable importance. 
+
+I think the most important tuning parameters will be `mtry` and `ntree` because the number of randomly sampled features will largely determine the performance of our model. Adding too many variables into the model will introduce noise to the random forest and make our final results worse. Therefore, we want to put in just the right amount of features into the model. Finding out the number of trees to grow is also important because we want to find the right amount of trees to build so that we do not overfit or underfit.
+
+</div>
+
+b. Use a random forest model to predict `medv`. Use the default parameters and report the 10-fold cross-validation MSE. 
+
+<div class="solution"> 
+
+```{r Problem 7.3 b}
+# Control Randomness
+set.seed(666)
+
+# Get data
+data <- MASS::Boston
+
+# Set up the fold membership
+n.folds <- 10
+fold <- sample(rep(1:n.folds, length = nrow(data)))
+
+# Create a empty list to store results
+output <- list()
+
+# Cross Validation Starts:
+for (i in 1:n.folds) {
+  
+  # Define train and test data
+  train <- data[fold != i,]
+  test <- data[fold == i,]
+  
+  # Build the random forest model
+  model <- randomForest(medv ~ ., data = train)
+  
+  # Predict on the test data
+  pred <- predict(model, newdata = test)
+  
+  # Store the resulting MSE to the output
+  output[[i]] <- data.frame(Run = i,
+                            MSE = mean((test$medv - pred)^2))
+}
+# Collect the results
+output <- bind_rows(output)
+
+# Report the Average MSE 
+mean(output$MSE)
+```
+
+
+</div>
+
+
+c. Now we will vary the tuning parameters of `mtry` and `ntree` to see what effect they have on performance. 
+    - Use a range of reasonable `mtry` and `ntree` values.
+    - Use 5 times repeated out-of-bag (OOB) to assess performance. That is, run random forest 5 times for each tuning set, calculate the OOB MSE each time and use the average for the MSE associated with the tuning parameters.
+    - Use a plot to show the average MSE as a function of `mtry` and `ntree`.
+    - Report the best tuning parameter combination. 
+    - Note: random forest is a stochastic model; it will be different every time it runs. Set the random seed to control the uncertainty associated with the stochasticity. 
+    - Hint: If you use the `randomForest` package, the `mse` element in the output is a vector of OOB MSE values for 1:`ntree` trees in the forest. This means that you can set `ntree` to some maximum value and get the MSE for any number of trees less than `ntree`. 
+
+<div class="solution"> 
+
+```{r Problem 7.3 c}
+# Control Randomness
+set.seed(666)
+
+# Set the range of parameters to tune
+ntree <- 1000
+mtry <- 1:(ncol(data) - 1)
+
+# Create a empty list to store results
+output <- list()
+
+# Hyperparameter tuning starts:
+for (m in mtry) {
+  
+  # Create a empty list to MSE for the 5 runs
+  mse <- list()
+  
+  # 5 runs of OOB MSE calculation
+  for (i in 1:5) {
+    # Running the model
+    model <- randomForest(medv ~ ., 
+                        data = data,
+                        mtry = m,
+                        ntree = ntree)
+    
+    # Store the MSE results
+    mse[[i]] <- data.frame(run = i, ntree = 1:ntree, MSE = model$mse)
+  }
+  
+  # Store the results to output
+  output[[m]] <- bind_rows(mse) %>% 
+    group_by(ntree) %>% 
+    summarize(MSE = mean(MSE)) %>% 
+    mutate(mtry = m) %>% 
+    select(mtry, ntree, MSE)
+}
+
+# Collect the results
+output <- bind_rows(output)
+
+# Report the smallest MSE
+output %>% filter(MSE == min(MSE))
+```
+
+The best combination of `mtry` and `ntree` is `mtry = 6` and `ntree = 188`. The best MSE is 9.473367.
+
+```{r Problem 7.3 c plot}
+ggplot(data = output, aes(x = ntree, y = MSE, color = factor(mtry))) +
+  geom_line()
+```
+
+</div>
+

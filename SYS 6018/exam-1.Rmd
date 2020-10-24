@@ -1,0 +1,649 @@
+---
+title: "Exam I"
+author: "**Congxin (David) Xu**"
+date: "Due: Thu Oct 1 | 1:55pm"
+output: 
+  html_document:
+  # html_notebook:  
+    df_print: default  # set default format for table output
+---
+
+
+**SYS 6018 | Fall 2020 | University of Virginia **
+
+*******************************************
+
+<!--- Below are global settings for knitr. You can override any of them by adding the changes to individual chunks --->
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(error=TRUE,        # Keep compiling upon error
+                      collapse=FALSE,    # collapse by default
+                      echo=TRUE,         # echo code by default
+                      comment = "#>",    # change comment character
+                      fig.width = 5,     # set figure width
+                      fig.align = "center",# set figure position
+                      out.width = "49%", # set width of displayed images
+                      warning=FALSE,     # do not show R warnings
+                      message=FALSE)     # do not show R messages
+options(dplyr.summarise.inform = FALSE)  # ignore message about group structure
+
+```
+
+<!--- Solution Region --->
+```{css solution-region, echo=FALSE}
+.solution {
+  background-color: #232D4B10;
+  border-style: solid;
+  border-color: #232D4B;
+  padding: .5em;
+  margin: 20px
+}
+```
+
+
+<!--- Load Required R packages here --->
+```{r packages, include=FALSE}
+#- Better table printing
+library(kableExtra) # https://haozhu233.github.io/kableExtra/awesome_table_in_html.html
+format_table <- function(x, nmax=10) {
+  kable(x) %>% 
+    kable_styling(full_width = FALSE, font_size=11, position = "left") %>% 
+    {if(nrow(x) > nmax) scroll_box(., width = "100%", height = "200px") else .}
+}
+#- useful functions
+digits <- function(x, k=2) format(round(x, k), nsmall=k)
+#- data directory
+data.dir = 'https://mdporter.github.io/SYS6018/data/'
+#- required functions
+library(tidyverse)
+library(glmnet)
+library(MASS)
+library(Matrix)
+```
+
+
+<div style="background-color:lightgrey; display: block; border-color: black; padding:1em">
+
+- The exam is only for the private use of the students of SYS-6018 Fall 2020. Sharing of the exam questions, posting on the internet, selling to a company, or possession by anyone else at the University of Virginia constitutes a violation of the honor policy.
+
+- You may **not** discuss this exam with anyone else (besides teaching staff). All work must be done independently. You may consult textbooks, online material, etc. but any outside resource must be cited.
+    - Add an informal reference (e.g., url, book title) to any source consulted for each problem. 
+    - You may reuse code from my class materials/homework solutions, just make a note that you did so. 
+
+- Unless otherwise noted, all referenced datasets will be found at directory `https://mdporter.github.io/SYS6018/data`. In R, the path to these files can be obtained by
+```{r, eval=FALSE}
+data.dir = 'https://mdporter.github.io/SYS6018/data'
+file.path(data.dir, "filename.ext")
+```
+</div>
+
+
+
+
+### Problem 1 (15 pts): Human Activity Recognition 
+
+
+A current engineering challenge is to identify/classify human activity (e.g., walking, in car, on bike, eating, smoking, falling) from smartphones and other wearable devices. 
+More specifically, the embedded sensors (e.g., accelerometers and gyroscopes) produce a time series of position, velocity, and acceleration measurements. These time series are then processed to produce a set of *features* that can be used for activity recognition. In this problem, you will use supervised learning methods to classify observations into one of six categories: Walking (1), Walking upstairs (2), walking downstairs (3), Sitting (4), Standing (5), and Laying Down (6).  
+
+For those with interest, the details of the data collection process and features can be found in this [paper](https://www.elen.ucl.ac.be/Proceedings/esann/esannpdf/es2013-84.pdf). The performance of the support vector machine (SVN) classifier used in the paper is given in Table 4 (shown here):
+```{r, echo=FALSE, out.width="50%", fig.align='center'}
+knitr::include_graphics(file.path(data.dir, "../other/HAR-table.png"))
+```
+
+
+a. Load the training and test data.
+    - Training Data: [activity_train.csv](https://mdporter.github.io/SYS6018/data/activity_train.csv)
+    - Testing Data: [activity_test.csv](https://mdporter.github.io/SYS6018/data/activity_test.csv)
+    - The first column are the labels and the remaining columns are the 561 predictor variables
+    - Assume 1 = WK, 2 = WU, ... 6 = LD. 
+
+<div class="solution">
+
+```{r Problem 1.a, message=FALSE}
+train <- read_csv("https://mdporter.github.io/SYS6018/data/activity_train.csv")
+test <- read_csv("https://mdporter.github.io/SYS6018/data/activity_test.csv")
+```
+
+
+</div>
+
+
+
+b. Run Linear Discriminant Analysis (LDA), using all of the features, make predictions for the test set and construct a confusion matrix like Table 4 of the paper (you don't have to include Recall and Precision). 
+	- Provide your code
+	- Ensure the table has the correct order of rows/columns (the names don't have be used)
+	- See ISLR 4.4 and 4.6.3 for more details on LDA and how to implement in R
+
+<div class="solution">
+Note: Some of the code used in this chunk below are from the ISLR Section 4.6.3 as suggested in the question. 
+```{r Problem 1.b, warning=FALSE}
+# Build out the LDA model 
+lda.model <- lda(y ~., data = train)
+# print(lda.model)
+
+# Make predictions 
+lda.pred <- predict(lda.model, newdata = test)
+# names(lda.pred)
+
+# Extract Class from prediction
+lda.class <- lda.pred$class
+
+# Create a confusion table
+conf <- table(actual = test$y, lda.class)
+conf
+```
+
+
+</div>
+
+
+
+
+c. How well did LDA do compared to the method employed in the paper? Discuss total Accuracy, Precision, and Recall. 
+
+<div class="solution">
+```{r Problem 1 c Recall}
+conf <- as.data.frame(conf)
+conf %>% 
+  group_by(actual) %>% 
+  summarise(Total = sum(Freq)) %>% 
+  right_join(conf, by = c('actual')) %>%
+  mutate(correct = ifelse(actual == lda.class, 1, 0)) %>% 
+  filter(correct == 1) %>% 
+  mutate(Recall = round(Freq / Total, 2)) %>% 
+  dplyr::select(actual, Recall)
+```
+The Recall rates are calculated above. We notice that when comparing to the Support Vector Machine, LDA has higher Recall rate in *Walking Upstairs* and lower Recall rate in *Walking Downstairs* and *Standing*. For *Walking*, *Sitting* and *Laying Down*, the two algorithms have the same Recall rate.
+
+```{r Problem 1 c Precision}
+conf %>% 
+  group_by(lda.class) %>% 
+  summarise(Total = sum(Freq)) %>% 
+  right_join(conf, by = c('lda.class')) %>%
+  mutate(correct = ifelse(actual == lda.class, 1, 0)) %>% 
+  filter(correct == 1) %>% 
+  mutate(Precision = round(Freq / Total, 2)) %>% 
+  dplyr::select(lda.class, Precision)
+```
+
+Precision rates are calculated above. We notice that when comparing the Support Vector Machine, LDA has higher Precision rate in *Walking* and *Walking Downstairs*, and lower Precision rate in *Walking Upstairs* and *Sitting*. For *Standing* and *Laying Down*, the two algorithms have the same Precision rate.
+
+```{r Problem 1 c Total Accuracy}
+# LDA Total Accuracy
+conf %>% 
+  mutate(correct = ifelse(actual == lda.class, 1, 0)) %>% 
+  filter(correct == 1) %>% 
+  dplyr::select(Freq) %>% 
+  sum() / nrow(test)
+
+# SVM Total Accuracy
+(492 + 451 + 410 + 432 + 518 + 537) / nrow(test)
+```
+
+Based on the calculation above, we can see that LDA has a Total Accuracy rate of $96.23\%$, which is almost as good as the Total Accuracy rate ($96.37\%$) of the SVM model presented in the paper. Therefore, we can conclude that LDA is doing slightly worse than the SVM employed in the paper in terms of total accuracy, but LDA is doing a better job in identifying certain classes in terms of Recall rates and Precision rates. 
+</div>
+
+
+
+
+
+
+
+### Problem 2 (16 pts): One vs. Rest Classification for multi-class problems
+
+In LDA, it is straightforward to fit a model with more than two classes. Other methods, like Logistic Regression, are designed to deal with response variables that take only two values. However we can still use binary classifiers for a multi-class problems. One approach, called *one-vs-rest* is the easiest to implement (<https://en.wikipedia.org/wiki/Multiclass_classification>, and see ISL 9.4.2).
+
+For response variables that take K values, K models will be fit. Model 1 will be fit to discriminant class $1$ from all the other classes ($\{2,\ldots, K\}$). Model 2 will be fit to discriminate class $2$ from all the other classes ($\{1, 3, 4, \ldots, K\}$), etc. The estimated class for observation $Y_i$ is the one receiving the highest probability score (this assumes equal costs of mis-classification).
+
+Details: To fit model $k$ on the training data, code $Y=1$ if the label is $k$ and $Y=0$ if the label is not $k$ (thus comparing class $k$ vs all the rest). Then on the test data, calculate $\hat{p}_k(x_i)$, the estimated probability that $Y = 1$ according to model $k$. The estimated class label for test observation $i$ is $\arg\max_{1\leq k \leq K} \hat{p}_k(x_i)$. 
+
+
+a. Implement the *one-vs-rest* procedure using penalized logistic regression (i.e., lasso, ridge, or elasticnet) on the HAR data from problem 1. 
+    - Describe how you selected $\alpha$ and $\lambda$ (many correct ways to do this)
+    - Construct a confusion matrix like Table 4 of the paper (you don't have to include Recall and Precision). 
+    - Provide your code
+    - Note: this may take a long time (e.g., 20 mins) to run
+
+<div class="solution">
+
+For each of the six One-Versus-All models, I am going to fit 11 models using 11 difference $\alpha$ values from, 0, 0.1, 0.2, ..., 1 with a 10-fold cross validation on each model. I am going choose best $\alpha$ values with its corresponding $\lambda$ based on the model deviance calculated in cross validation for each of the six One-Versus-All models.
+```{r Problem 2}
+# Running Time: 1.5 hours
+ 
+# Control Randomness
+set.seed(666) 
+
+# Create a empty list to store results
+output <- list()
+
+for (class in 1:6) {
+
+  # Define Training data 
+  X.train <- train %>%
+    mutate(new_y = ifelse(y == class, 1, 0)) %>% 
+    dplyr::select(-y, -new_y) %>% 
+    as.matrix()
+  Y.train <- train %>% 
+    mutate(new_y = ifelse(y == class, 1, 0)) %>% 
+    dplyr::select(new_y) %>% 
+    as.matrix()
+  
+  # Cross Validation Setting
+  n.folds <- 5
+  fold <- sample(rep(1:n.folds, length = nrow(X.train)))
+  
+  # Pre-defined setting
+  alpha <- seq(0, 1, 0.1)
+  
+  # Create a empty list to store results
+  tmp <- list()
+  
+  # Finding the best alpha
+  for (m in 1:length(alpha)) {
+  
+      # Build model using CV 
+      model <- cv.glmnet(x = X.train, y = Y.train, foldid = fold, alpha = alpha[m], family = 'binomial')
+      
+      # Store the data into tmp
+      tmp[[m]] <- data.frame(alpha = alpha[m], 
+                             lambda = model$lambda.1se,
+                             dev = model$cvm[which(model$lambda == model$lambda.1se)])
+      
+      # print(paste(m, Sys.time(), sep = ", "))
+
+  }
+
+  # Convert list back to data frame
+  tmp <- bind_rows(tmp)
+  
+  # Report alpha and lambda for final prediction based on minimum deviance
+  best <- tmp %>% 
+    filter(dev == min(dev))
+  
+  # Convert Test Data into Matrix
+  X.test <- test %>% dplyr::select(-y) %>% as.matrix()
+  
+  # Refit model with best alpha
+  model <- cv.glmnet(x = X.train, y = Y.train, foldid = fold, alpha = best$alpha[1], family = 'binomial')
+  
+  # Refit model with best lambda given alpha
+  output[[class]] <- data.frame(Class = class, 
+                                pred = predict(model, 
+                                               newx = X.test, 
+                                               s = best$lambda[1], 
+                                               type = 'response')[,1])
+  
+}
+
+# Convert list back to data frame
+final <- bind_rows(output)
+
+# Calculate the most
+final <- final %>%
+  mutate(RowID = rep(seq(1, nrow(test)), 6)) %>% 
+  group_by(RowID) %>% 
+  summarise(pred = max(pred)) %>% 
+  left_join(final, by = c('pred')) %>% 
+  bind_cols(test %>% dplyr::select(y))
+
+# Build out the confusion matrix
+table(actual = final$y, model = final$Class)
+```
+
+</div>
+
+b. How does this approach compare to LDA and the method employed in the paper? Discuss total Accuracy, Precision, and Recall. 
+
+<div class="solution">
+
+```{r Problem 2 Recall}
+conf <- as.data.frame(table(actual = final$y, model = final$Class))
+conf %>% 
+  group_by(actual) %>% 
+  summarise(Total = sum(Freq)) %>% 
+  right_join(conf, by = c('actual')) %>%
+  mutate(correct = ifelse(actual == model, 1, 0)) %>% 
+  filter(correct == 1) %>% 
+  mutate(Recall = round(Freq / Total, 2)) %>% 
+  dplyr::select(actual, Recall)
+```
+The Recall rates are calculated above. We notice that when comparing to the Support Vector Machine, One-Versus-All model has higher Recall rate in *Walking* and lower Recall rate in *Walking Downstairs* and *Sitting*. For *Walking Upstairs*, *Standing*, and *Laying Down*, the two algorithms have the same Recall rate.
+
+When comparing to the LDA model, One-Versus-All model has higher Recall rate in *Walking*, *Walking Downstairs* and *Standing*, and lower Recall rate in  *Walking Upstairs* and *Sitting*. For *Laying Down*, the two algorithms have the same Recall rate.
+
+
+```{r Problem 2 Precision}
+conf %>% 
+  group_by(model) %>% 
+  summarise(Total = sum(Freq)) %>% 
+  right_join(conf, by = c('model')) %>%
+  mutate(correct = ifelse(actual == model, 1, 0)) %>% 
+  filter(correct == 1) %>% 
+  mutate(Precision = round(Freq / Total, 2)) %>% 
+  dplyr::select(model, Precision)
+```
+
+Precision rates are calculated above. We notice that when comparing the Support Vector Machine, One-Versus-All model has higher Precision rate in *Walking Downstairs*, and lower Precision rate in *Walking Upstairs*, *Sitting* and *Standing*. For *Walking* and *Laying Down*, the two algorithms have the same Precision rate.
+
+When comparing the LDA model, One-Versus-All model has higher Precision rate in *Walking Upstairs* and *Sitting*, and lower Precision rate in *Walking* and *Standing*. For *Walking Downstairs* and *Laying Down*, the two algorithms have the same Precision rate.
+
+```{r Problem 2 Total Accuracy}
+# One versus All Total Accuracy
+conf %>% 
+  mutate(correct = ifelse(actual == model, 1, 0)) %>% 
+  filter(correct == 1) %>% 
+  dplyr::select(Freq) %>% 
+  sum() / nrow(test)
+```
+
+Based on the calculation above, we can see that the One-Versus-All model has a Total Accuracy rate of $96.10\%$, which is almost as good as the SVM model ($96.37\%$) and the LDA model ($96.23\%$). Therefore, we can conclude that One-Versus-All model is doing slightly worse than the SVM model and LDA model in terms of total accuracy, but One-Versus-All model is doing a better job in identifying certain classes in terms of Precision rates and Recall rates when comparing to the SVM model and LDA model. 
+
+
+</div>
+
+
+### Problem 3 (16 pts): Feature Selection with Lasso
+
+
+In problem 1, all 561 features were used to run LDA. There is a (good) chance that not all features are relevant and are only adding noise. In addition, the features can be costly to calculate (e.g., due to battery consumption) so using fewer features may even be worth a slightly lower performance. 
+
+While plain LDA does not allow variable selection, the Lasso model can shrink some coefficients to exactly 0 and thus perform variable selection. If $\hat{\beta}_j = 0$, then the $j$th predictor is effectively removed/dropped. 
+
+To remove the added complication of the multiclass problem, focus only on discriminating between classes 4 (Sitting) and 5 (Standing) which are the most difficult to discern. 
+
+
+a. Extract the training and test data based on classes 4 (Sitting) and 5 (Standing).
+
+<div class="solution">
+
+```{r Problem 3 a}
+train45 <- train %>% filter(y %in% c(4, 5)) %>% mutate(y = ifelse(y == 5, 1, 0))
+test45 <- test %>% filter(y %in% c(4, 5)) %>% mutate(y = ifelse(y == 5, 1, 0))
+```
+I define class class 5 (Standing) as new class 1, and 4 (Sitting) as new class 0.
+</div>
+  
+
+
+b. Implement lasso logistic regression on the subset of the HAR data corresponding to classes 4 and 5. 
+    - Provide the value of the $\lambda$ you used and how you selected it. 
+    - How many of the 561 predictor variables are included in the optimal model? I.e., how many coefficients are non-zero?
+    - Provide your code and don't forget to set the random seed
+    
+<div class="solution">
+
+```{r Problem 3 b}
+# Randomness Control
+set.seed(666) 
+
+# Define Training and Testing data 
+X.train <- train45 %>% dplyr::select(-y) %>% as.matrix()
+Y.train <- train45 %>% dplyr::select(y)  %>% as.matrix()
+
+# Cross Validation Setting
+n.folds <- 10
+fold <- sample(rep(1:n.folds, length = nrow(X.train)))
+
+# Build model using CV to find the best lambda with smallest deviance
+model <- cv.glmnet(x = X.train, y = Y.train, alpha = 1, foldid = fold, family = 'binomial') # Lasso: alpha = 1
+
+# Best Lambda based on 10 fold cross validation using deviance
+model$lambda.1se
+
+# Find the number of non-zero coefficients except intercept
+sum(coef(model)@x != 0) - 1 # minus the intercept
+```
+
+Based on my 10 fold cross validation on the training data, the best lambda I found using the Binomial deviance metric is $\lambda = 0.003117385$. Using this particular lambda value, out of the 561 predictor variables, only **81** of them are included in the optimal model.
+
+</div>
+  
+    
+c. Use the fitted (lasso) logistic regression model to make predictions on the test data (only classes 4 and 5) and create a performance table (confusion matrix like Table 4 of the paper, but only for classes 4 and 5).
+    - Use $p \geq .5$ for threshold (for maximizing accuracy)
+    - Also report Accuracy
+   	
+<div class="solution">
+```{r Problem 3 c Confusion matrix}
+# Convert test data into a matrix
+X.test  <- test45 %>% dplyr::select(-y) %>% as.matrix()
+
+# Finding the best lambda
+Y.test  <- test45 %>% 
+  dplyr::select(y) %>% 
+  mutate(pred = predict(model, newx = X.test, s = 'lambda.1se', type = 'response')) %>% 
+  mutate(pred = ifelse(pred >= 0.5, 1, 0)) # Use 0.5 as cutoff
+
+# Convert loss list back to data frame
+table(actual = Y.test$y, model = Y.test$pred)
+```
+
+```{r Problem 3 c Accuray}
+# Lasso Total Accuracy
+table(actual = Y.test$y, model = Y.test$pred) %>% 
+  as.data.frame() %>% 
+  mutate(correct = ifelse(actual == model, 1, 0)) %>% 
+  filter(correct == 1) %>% 
+  dplyr::select(Freq) %>% 
+  sum() / nrow(test45)
+```
+
+The total accuracy for the lasso model is $92.67\%$.
+</div>
+ 
+   	
+   	
+d. Use only the variables selected by the Lasso model in part b to run LDA. 
+    - Create the performance table
+    - Use the MAP labels (class that maximizes posterior probability)
+    - Also report Accuracy
+
+<div class="solution">
+
+```{r Problem 3 d, message=FALSE}
+# Convert coefficient object to data frame
+tmp <- coef(model) %>% as.matrix() %>% as.data.frame() 
+
+# Extract the predictors with non-zero coefficients
+selected.predictor <- tmp %>% 
+  mutate(predictor = rownames(tmp)) %>% 
+  filter(`1` != 0,
+         predictor != "(Intercept)") %>% 
+  dplyr::select(predictor)
+
+# Create a new train and test with the selected variables
+new_train45 <- train45 %>% 
+  dplyr::select(y, selected.predictor$predictor)
+new_test45 <- test45 %>% 
+  dplyr::select(y, selected.predictor$predictor)
+
+# Build out the LDA model 
+lda.model <- lda(y ~ ., data = new_train45)
+
+# Make predictions using LDA
+lda.pred <- predict(lda.model, newdata = new_test45)
+
+# Build out the confusion matrix
+table(actual = new_test45$y, model = lda.pred$class)
+```
+
+```{r Problem 3 d Accuray}
+# LDA Total Accuracy
+table(actual = new_test45$y, model =lda.pred$class) %>% 
+  as.data.frame() %>% 
+  mutate(correct = ifelse(actual == model, 1, 0)) %>% 
+  filter(correct == 1) %>% 
+  dplyr::select(Freq) %>% 
+  sum() / nrow(test45)
+```
+The total accuracy for this LDA model is $93.74\%$, which is a little better than the Lasso model in part c. 
+
+</div>
+  
+
+    	
+e. Use only the variables selected by the Lasso model in part b to run (non-penalized) Logistic Regression. This is called *Relaxed Lasso*. When there are many non-useful predictors, this will often improve prediction.   
+    - Create the performance table
+    - Use $p \geq .5$ for threshold
+    - Also report Accuracy
+
+<div class="solution">
+
+```{r Problem 3 e, message=FALSE}
+# Convert response variable to a factor
+new_train45$y <- as.factor(new_train45$y)
+
+# Build out the non-penalized logistic regression 
+logit <- glm(y ~ ., data = new_train45, family = binomial)
+
+logit.probs <- predict(logit, newdata = new_test45, type = 'response')
+logit.probs <- ifelse(logit.probs >= 0.5, 1, 0)
+
+# Build out the confusion matrix
+table(actual = new_test45$y, model = logit.probs)
+```
+
+```{r Problem 3 e Accuray}
+# Relaxed Lasso Total Accuracy
+table(actual = new_test45$y, model = logit.probs) %>% 
+  as.data.frame() %>% 
+  mutate(correct = ifelse(actual == model, 1, 0)) %>% 
+  filter(correct == 1) %>% 
+  dplyr::select(Freq) %>% 
+  sum() / nrow(test45)
+```
+The total accuracy for this relaxed Lasso model is $92.77\%$, which is slightly better than the original Lasso model ($92.67\%$) in part c, but is a little worse than the LDA model ($93.74\%$) in part d.
+
+</div>
+
+### Problem 4 (3 pts): Logistic Regression
+
+Write a function that implements logistic regression. You can use ESL 4.4.1 for a description of the Newton-Raphson algorithm. Gradient descent is another option. You can consult other sources for a description of the algorithm, but you are *not* permitted to use someone else's code in full or part.
+
+- The function should take, at minimum, the following inputs: 
+    1. a predictor matrix (e.g., $X$) that does not including intercept (you will need to add the intercept term inside your function)
+    2. a binary response vector (e.g., $y$)
+    3. an argument(s) related to convergence criteria or number of allowable iterations
+    
+- The function should produce the following outputs: 
+    - The estimated coefficients, $\beta$, (including intercept). 
+    
+a. Provide your code and indicate what method you are using.
+
+<div class="solution">
+Using the process described in ESL 4.4.1, I created the following function:
+```{r Problem 4 a}
+#' @input predictor, type = matrix, the predictors for logistic regression. Do not provide intercept
+#' @input response, type = vector, the response variable for logistic regression, must be binary
+#' @output coef, type = data frame, the coefficients for each predictor including the intercept.
+
+
+Logisitic_Regression <- function(predictor, response, threshold = 10^-9, max.iteration = 10000) {
+  
+  # Add intercept term to the predictor matrix
+  predictor <- cbind(intercept = 1, predictor)
+  
+  # Define beta_old
+  beta_old <- matrix(data = 0, 
+                     nrow = ncol(predictor), 
+                     ncol = 1)
+  
+  # To work around the memory issue, I found this page: 
+  # http://www.johnmyleswhite.com/notebook/2011/10/31/using-sparse-matrices-in-r/
+  W <- Matrix(data = 0, nrow = nrow(predictor), ncol = nrow(predictor), sparse = T)
+  
+  # Track the number of iteration
+  iteration <- 0
+  
+  while (TRUE) {
+    
+    # fitted probability
+    p <- exp(predictor %*% beta_old) / (1 + exp(predictor %*% beta_old))
+  
+    # Define W
+    diag(W) <- p * (1 - p)
+    
+    # Using Newton–Raphson algorithm to update beta values
+    beta_new <- beta_old + solve(t(predictor) %*% W %*% predictor) %*% 
+      t(predictor) %*% (response - p)
+    
+    # If the absolute difference between new coefficients and old coefficients is small enough, 
+    #   we found the convergence.
+    if (sum(abs(beta_new - beta_old)) < threshold) {
+      break
+    } else {
+      # if the difference is still too large, we update old coefficients with new coefficients
+      beta_old <- beta_new
+      iteration <- iteration + 1
+    }
+    # If reached maximum iteration, stop!
+    if (iteration > max.iteration) {
+      stop("Maximum iteration reached. The model does not converge.")
+    }
+  }
+  # Return the found coefficients
+  return(beta_old)
+}
+
+```
+
+Run a small test on the Iris data to validate the coefficients:
+```{r Problem 4 a Validation Part 1, message=FALSE}
+# Set a seed
+set.seed(666)
+
+# Using the Iris data to validate my own logistic regression function
+data <- iris %>% 
+  mutate(Species = ifelse(Species == 'virginica', 1, 0))
+
+# Shuffle rows of the data
+rows <- sample(nrow(data))
+data <- data[rows,]
+
+# Run a normal logistic regression using glm()
+logit <- glm(data = data, Species ~ ., family = 'binomial')
+coef(logit)
+```
+
+
+
+```{r Problem 4 a Validation Part 2}
+# Testing to see if we are table to get roughly the same results as glm() function
+Logisitic_Regression(predictor = data[,1:4] %>% as.matrix(),
+                     response = data[,5] %>% as.matrix())
+```
+
+By comparing the coefficients generated by `glm()` and my own `Logisitic_Regression()`, we can see that the `Logisitic_Regression()` is able to get the same coefficients coming out of the `glm()` model.
+</div>
+ 
+
+
+b. Run your method on the [linkage-train](https://mdporter.github.io/SYS6018/data/linkage_train.csv) data from HW \#4 and report the estimated coefficients (use all 8 predictors). Show how close they are to the coefficients using an existing logistic regression implementation (e.g., `glm()`).	
+    - If you experience memory problems, either modify your algorithm or use only the first 2000 observations (for 1/2 point penalty).
+
+<div class="solution">
+
+```{r Problem 4 b Modeling, message=FALSE}
+# Reading the training data 
+train <- read_csv("https://mdporter.github.io/SYS6018/data/linkage_train.csv")
+
+# Run logistic regression using my own function:
+own_coef <- Logisitic_Regression(predictor = train %>% dplyr::select(-y) %>% as.matrix(),
+                                 response = train %>% dplyr::select(y) %>% as.matrix())
+
+# Run logistic regression using glm function
+glm_coef <- coef(glm(data = train, y~ ., family = 'binomial'))
+
+# Compare the coefficients
+data.frame("My Logit Function" = own_coef@x, "glm" = glm_coef)
+```
+We can see that the difference in coefficients generated by the two methods are very small. 
+
+</div>
+
+
+
+
+
+
+

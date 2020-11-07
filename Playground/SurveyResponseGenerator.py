@@ -9,9 +9,12 @@
 #   - Identify the potential responses
 #   - Create a hash table with responses
 #   - Set up a random process to generate responses based on existing ones.
-#   - Single Select Question vs. Multi Select Question
 # 3. Write out the survey response
 
+# Warning:
+# 1. Incomplete questions
+# 2. Single select vs. multiple select
+# 3. 
 
 # %% Import Modules
 import pandas 
@@ -32,8 +35,8 @@ data.head()
 
 # %% Separate Questions and Answers
 questions = data.query('Type == "Question"')\
-    [['Display', 'PMI_Code']]
-questions.columns = ['Questions', 'PMI_Code']      
+    [['Display', 'PMI_Code', 'Answer_Type']]
+questions.columns = ['Questions', 'PMI_Code', 'Answer_Type']      
 
 answers = data.query('Type == "Answer"')\
     [['Display', 'Parent_code']]      
@@ -41,10 +44,9 @@ answers.columns = ['Answers', 'Parent_code']
 
 # %% Join Questions and Answers together by ID
 pandas.merge(questions, answers, 
-                  left_on='PMI_Code', right_on='Parent_code',
-                  how = 'left',indicator = 'matched', 
-                  validate = 'many_to_many').\
-    matched.value_counts()
+             left_on='PMI_Code', right_on='Parent_code',
+             how = 'left',indicator = 'matched', 
+             validate = 'many_to_many').matched.value_counts()
 
 # both          181
 # left_only     146
@@ -52,22 +54,53 @@ pandas.merge(questions, answers,
 
 # It means that only a couple questions got answered in the Excel file
 #   and for some question remain unanswered. For this project, I am only
-#   going to focus on the answers.
+#   going to focus on the questions with answers.
 
-# %%
+# %% Add Race,  Gender, Age Group to answers:
+tmp =  {'Answers': ['American Indian or Alaska Native', 'Asian', 
+                    'Black or African American', 'Hispanic or Latino',
+                    'Native Hawaiian or Other Pacific Islander',
+                    'White', 'Male', 'Female', 'Other', 
+                    'Under 12 years old', '12-17 years old', 
+                    '18-24 years old.', '25-34 years old.', 
+                    '35-44 years old', '45-54 years old.', 
+                    '55-64 years old.', '65 or older'], 
+        'Parent_code': ['Race', 'Race','Race', 'Race', 'Race', 'Race',
+                         'Gender', 'Gender', 'Gender', 'Age_Group', 
+                         'Age_Group', 'Age_Group', 'Age_Group', 'Age_Group', 
+                         'Age_Group', 'Age_Group', 'Age_Group']}
+answers = answers.append(pandas.DataFrame.from_dict(tmp))
+
+# %% Function that generate the survey response
 def generate_survey_response(question_id, answers):
     # Filter on the answers with correct answers
     tmp_answers = answers[answers['Parent_code'] == question_id]
     
     if (len(tmp_answers) != 0):
-        # Randomly select a row to return
-        row = numpy.random.randint(0, len(tmp_answers) - 1)
+        if (len(tmp_answers) == 1):
+            row = 0
+        else:
+            # Randomly select a row to return
+            row = numpy.random.randint(0, len(tmp_answers) - 1)
         # Return the answers of that row
         return answers.iloc[row, 0]
     else:
-        return("question_id does not match")
+        return("Incorrect ID provided. Unable to generate random answers")
 
 
+# %% Generate output csv file 
+number_of_response = 1000
+output = list()
+question_id = ['ResponderID', 'Race', 'Gender', 'Age_Group'] + \
+    sorted(questions.PMI_Code.unique())
+
+for k in range(1, number_of_response + 1):
+    tmp = ['Responder ' + str(k)]
+    for i in range(1, len(question_id)):    
+        tmp += [generate_survey_response(question_id[i], answers)]
+
+    output += [tmp]
+
 # %%
-generate_survey_response('cdc_covi', answers)
-# %%
+final = pandas.DataFrame(data = output,columns = question_id)
+final.to_csv('RandomSurveyResponse.csv')

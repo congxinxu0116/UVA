@@ -83,9 +83,9 @@ def generate_survey_response(question_id, answers):
             # Randomly select a row to return
             row = numpy.random.randint(0, len(tmp_answers) - 1)
         # Return the answers of that row
-        return answers.iloc[row, 0]
+        return tmp_answers.iloc[row, 0]
     else:
-        return("Incorrect ID provided. Unable to generate random answers")
+        return("NA")
 
 
 # %% Generate output csv file 
@@ -104,3 +104,4 @@ for k in range(1, number_of_response + 1):
 # %%
 final = pandas.DataFrame(data = output,columns = question_id)
 final.to_csv('RandomSurveyResponse.csv')
+# %%

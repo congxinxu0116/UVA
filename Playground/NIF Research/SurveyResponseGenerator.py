@@ -11,11 +11,6 @@
 #   - Set up a random process to generate responses based on existing ones.
 # 3. Write out the survey response
 
-# Warning:
-# 1. Incomplete questions
-# 2. Single select vs. multiple select
-# 3. 
-
 # %% Import Modules
 import pandas 
 import numpy
@@ -104,4 +99,3 @@ for k in range(1, number_of_response + 1):
 # %%
 final = pandas.DataFrame(data = output,columns = question_id)
 final.to_csv('RandomSurveyResponse.csv')
-# %%

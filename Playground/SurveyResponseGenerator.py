@@ -54,11 +54,20 @@ pandas.merge(questions, answers,
 #   and for some question remain unanswered. For this project, I am only
 #   going to focus on the answers.
 
-# %% Program
-# Convert Answer DF to a dictionary
+# %%
+def generate_survey_response(question_id, answers):
+    # Filter on the answers with correct answers
+    tmp_answers = answers[answers['Parent_code'] == question_id]
+    
+    if (len(tmp_answers) != 0):
+        # Randomly select a row to return
+        row = numpy.random.randint(0, len(tmp_answers) - 1)
+        # Return the answers of that row
+        return answers.iloc[row, 0]
+    else:
+        return("question_id does not match")
 
-answers.pivot(index = 'Answers', columns = 'Parent_code', 
-                values = 'Answers')
 
-
+# %%
+generate_survey_response('cdc_covi', answers)
 # %%

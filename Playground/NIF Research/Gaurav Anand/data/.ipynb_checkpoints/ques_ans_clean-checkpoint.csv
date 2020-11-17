@@ -1,0 +1,253 @@
+,qid,Display,answers
+0,0,You can choose not to answer any question at any time. This survey will take approximately 15 to 20 minutes to complete.,['I would like to take it now.']
+1,1,"In the past month, have recommendations for socially distancing caused stress for you?","['None of the days (0 days)', 'A few days (1-2 days)', 'Most days (3-4 days)', 'Every day']"
+2,2,"Thinking about your current social habits, in the last 5 days:
+ I have stayed home all day.","['None of the days (0 days)', 'A few days (1-2 days)', 'Most days (3-4 days)', 'Every day']"
+3,3,"Thinking about your current social habits, in the last 5 days:
+ I have gone to my workplace or volunteer site that is outside my home.","['None of the days (0 days)', 'A few days (1-2 days)', 'Most days (3-4 days)', 'Every day']"
+4,4,"Thinking about your current social habits, in the last 5 days:
+ I have attended social gatherings outside my home of MORE than 10 people.","['None of the days (0 days)', 'A few days (1-2 days)', 'Most days (3-4 days)', 'Every day']"
+5,5,"Thinking about your current social habits, in the last 5 days:
+ I have attended social gatherings outside my home of LESS than 10 people.","['None of the days (0 days)', 'A few days (1-2 days)', 'Most days (3-4 days)', 'Every day']"
+6,6,"Thinking about your current social habits, in the last 5 days:
+ I have gone on shopping trips or outings that were ""just for fun"".","['None of the days (0 days)', 'A few days (1-2 days)', 'Most days (3-4 days)', 'Every day']"
+7,7,"Thinking about your current social habits, in the last 5 days:
+ I have visited nursing homes or long-term care facilities (outside of work duties).","['None of the days (0 days)', 'A few days (1-2 days)', 'Most days (3-4 days)', 'Every day']"
+8,8,"Thinking about your current social habits, in the last 5 days:
+ I have been in close contact with someone who is in a risk group for COVID-19 (adults age 50+, people with chronic medical conditions like heart, lung, liver, or kidney disease, diabetes, high blood pressure, or a suppressed immune system). This includes someone inside or outside of your household.","['None of the days (0 days)', 'A few days (1-2 days)', 'Most days (3-4 days)', 'Every day']"
+9,9,"Thinking about these activities in the last 5 days, my social interaction with people outside my home was","['A lot less than normal', 'Somewhat less than normal', 'About the same as normal', 'More than normal', 'A lot more than normal']"
+10,10,"Now, thinking about the COVID-19 recommendations and mandates...How often in the past month are you doing the recommended pandemic hygiene, like washing hands frequently, avoiding touching your face, covering coughs, wearing a mask, and avoiding frequently touched surfaces in public places?","['All of the time', 'Most of the time', 'Sometimes', 'Rarely']"
+11,11,"In the past month, have you been sick for more than one day with a new illness related to COVID-19 or flu-like symptoms?","['Yes', 'No']"
+12,12,Approximate date of onset,2020-09-13 00:00:00
+13,13,Which of the following symptoms did you have? (select all that apply),"['Nausea', 'Diarrhea', 'Loss of smell or taste', 'Unusually hoarse voice', 'Skipping meals', 'Unusual abdominal pain or stomachache', 'Difficulty breathing or shortness of breath', 'Cough', 'Unusual eye soreness or discomfort (e.g.', 'Unusual chest pain or tightness in your chest', 'Runny or stuffy nose', 'Unusually strong muscle pains/aches', 'A fever/feverish', 'Unusual fatigue', 'Dizziness or light-headedness', 'Sore or painful throat', 'Headache', 'Confusion, disorientation, or drowsiness', 'Raised, red, itchy, welts on the skin or sudden swelling of the face or lips', 'Red/purple sores or blisters on your feet, including your toes']"
+14,14,"Have you EVER been near someone that you know or suspect had COVID-19 (such as co-workers, family members, or others)? Please select all that apply.","['Yes, known COVID-19', 'Not that I know of', 'Yes, suspected COVID-19']"
+15,15,Do you think you have had COVID-19?,"['Yes', 'No', 'Not Sure', 'Prefer Not to Answer']"
+16,16,Were you tested for COVID-19 in the past month?,"['Yes', 'No', 'Not Sure', 'Prefer Not to Answer']"
+17,17,Was the test for COVID-19 positive?,"['Yes', 'No', 'Unknown', 'Waiting for Results']"
+18,18,How were you tested? Please select all that apply.,"['Throat Swab', 'Nasal swab', 'Blood Sample']"
+19,19,Were you tested for influenza (flu) in the past month?,"['Yes', 'No', 'Not Sure', 'Prefer Not to Answer']"
+20,20,"In the past month, if you were sick with COVID-19 symptoms, how did you receive treatment(s)? Please select all that apply.","['I recovered at home', ""I didn't, I wasn't sick"", ""I spoke with a healthcare professional and wasn't admitted to the hospital"", 'I was admitted to the hospital for at least one night']"
+21,21,What breathing treatment did you receive? Please select all that apply.,"['A breathing machine (ventilator) with a tube down my throat', 'Oxygen (through an oxygen mask or tube under my nose', 'I did not receive breathing treatment', 'Oxygen (through an oxygen mask']"
+22,22,Please specify.,
+23,23,"In the past 7 days, I thought about COVID-19 when I didn't mean to.","['Not at all', 'A little bit', 'Moderately', 'Quite a bit', 'Extremely']"
+24,24,"In the past 7 days, I felt watchful or on-guard.","['Not at all', 'A little bit', 'Moderately', 'Quite a bit', 'Extremely']"
+25,25,"In the past 7 days, other things kept making me think about COVID-19.","['Not at all', 'A little bit', 'Moderately', 'Quite a bit', 'Extremely']"
+26,26,"In the past 7 days, I was aware that I still had a lot of feelings about COVID-19, but I didn't deal with them.","['Not at all', 'A little bit', 'Moderately', 'Quite a bit', 'Extremely']"
+27,27,"In the past 7 days, I tried not to think about COVID-19.","['Not at all', 'A little bit', 'Moderately', 'Quite a bit', 'Extremely']"
+28,28,"In the past 7 days, I had trouble concentrating.","['Not at all', 'A little bit', 'Moderately', 'Quite a bit', 'Extremely']"
+29,29,"In the past month, how has the COVID-19 outbreak affected you? Please select all that apply.","['Worked more hours than usual', 'Worked reduced hours', 'Worked remotely or from home more than you usually do', 'Incurred increased costs for childcare expenses', 'Not paid at all', 'Income or pay has been reduced', 'Worked with children at home with me', 'I became unemployed', 'Had serious financial problems', 'Was not able to work due to COVID-19 related illness', 'Had difficulty arranging for childcare']"
+30,30,"In the past month, have you experienced the following as a result of COVID-19? Please select all that apply.","['Not enough money to pay for medications', 'Not enough money to pay rent', 'Did not have a regular place to sleep or stay', 'Not enough money to pay for gas', 'Not enough money to pay for food']"
+31,31,"In the past month, have the following behaviors increased in your household? Please select all that apply.","['Interpersonal conflict with friends or coworkers', 'Interpersonal conflict with family members or loved ones', 'Snapping at or yelling at family members']"
+32,32,"In the past month, to cope with social distancing and isolation, are you doing any of the following? Please select all that apply.","['Using cannabis or marijuana more than usual', 'Smoking more cigarettes or vaping more', 'Increasing watching, reading, or listening to news stories, including social media', 'Eating high fat or sugary foods more than usual', 'Eating more food than usual', 'Cutting or self-injury more than usual', 'Over exercise', 'Taking care of your body, such as taking deep breaths, stretching, or meditating', 'Making time to relax', 'Eating less food than usual', 'Contacting a healthcare provider', 'Using non-prescription drugs more than usual', 'Connecting with others, including talking with people you trust about your concerns and how you are feeling', 'Using prescription drugs (like valium', 'Drinking alcohol more than usual', 'Taking breaks from watching, reading, or listening to news stories, including social media', 'Engaging in healthy behaviors like trying to eat healthy, well-balanced meals, exercising regularly, getting plenty of sleep', 'Delaying medical care for conditions other than COVID-19']"
+33,33,"Choose the answer that best describes how you felt in the past month.
+ In uncertain times, I usually expect the best.","['I disagree a lot', 'I agree a little', 'I disagree a little', 'I agree a lot', 'I neither agree nor disagree']"
+34,34,"Choose the answer that best describes how you felt in the past month.
+ In general, how happy are you?","['Very unhappy', 'Extremely unhappy', 'Extremely happy', 'Moderately unhappy', 'Very happy', 'Moderately happy']"
+35,35,"Choose the answer that best describes how you felt in the past month.
+ To what extent do you feel your life to be meaningful?","['Very much', 'An extreme amount', 'A moderate amount']"
+36,36,"Not including yourself, how many other people live at home with you?","[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]"
+37,37,Think of other people who live with you. How many are under the age of 18 years?,"[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]"
+38,38,What type of household do you live in?,"['Studio', 'One-bedroom apartment', 'Two-bedroom apartment', 'Three-bedroom (or more) apartment', 'Townhouse', 'Free-standing house', 'Nursing home', 'Homeless']"
+39,39,Please specify.,Bed huge few. Walk accept investment fine. Card kitchen hand end international. Man service lose president simple the.
+40,40,What is your current employment status? Please select all that apply.,"['Employed for wages (part- time or full-time)', 'Unable to work (disabled)', 'A homemaker', 'Out of work for 1 year or more', 'Self-employed', 'Retired', 'A student', 'Out of work for less than 1 year']"
+41,41,Are you covered by health insurance or some other kind of health care plan?,text
+42,42,Are you currently covered by any of the following types of health insurance or health care plans? Select all that apply.,"['TRICARE or other military health care', 'Medicaid, Medical Assistance, or any kind of government-assistance plan for those with low incomes or disability', 'Insurance purchased directly from an insurance company (by you or another family member)', 'Veterans Affairs (VA) (including those who have ever used or enrolled for VA health care)', 'Medicare, for people 65 and older or people with certain disabilities', 'Any other type of health insurance or health coverage plan', ""I don't have health insurance"", 'Insurance through a current or former employer or union (by you or another family member)', 'Indian Health Service']"
+43,43,Please specify.,text
+44,44,Are you currently on chemotherapy or immunotherapy?,"['Yes', 'No']"
+45,45,"Do you regularly take immunosuppressant medications (including steroids, methotrexate, biologic agents)?","['Yes', 'No']"
+46,46,What is your current marital status?,"['Living with partner', 'Married', 'Divorced', 'Never married', 'Separated', 'Widowed']"
+47,47,Are you currently pregnant?,"['Yes', 'No', 'Not Sure', 'Prefer Not to Answer']"
+48,48,"Choose the answer that best describes how often you can find this kind of support in the past month.
+ Someone to help you if you were confined to bed","['All of the time', 'Most of the time', 'Some of the time', 'A little of the time', 'None of the time']"
+49,49,"Choose the answer that best describes how often you can find this kind of support in the past month.
+ Someone to take you to the doctor if you needed it","['All of the time', 'Most of the time', 'Some of the time', 'A little of the time', 'None of the time']"
+50,50,"Choose the answer that best describes how often you can find this kind of support in the past month.
+ Someone to prepare your meals if you were unable to do it yourself","['All of the time', 'Most of the time', 'Some of the time', 'A little of the time', 'None of the time']"
+51,51,"Choose the answer that best describes how often you can find this kind of support in the past month.
+ Someone to help with daily chores if you were sick","['All of the time', 'Most of the time', 'Some of the time', 'A little of the time', 'None of the time']"
+52,52,"Choose the answer that best describes how often you can find this kind of support in the past month.
+ Someone to have a good time with","['All of the time', 'Most of the time', 'Some of the time', 'A little of the time', 'None of the time']"
+53,53,"Choose the answer that best describes how often you can find this kind of support in the past month.
+ Someone to turn to for suggestions about how to deal with a personal problem","['All of the time', 'Most of the time', 'Some of the time', 'A little of the time', 'None of the time']"
+54,54,"Choose the answer that best describes how often you can find this kind of support in the past month.
+ Someone who understands your problems","['All of the time', 'Most of the time', 'Some of the time', 'A little of the time', 'None of the time']"
+55,55,"Choose the answer that best describes how often you can find this kind of support in the past month.
+ Someone to love and make you feel wanted","['All of the time', 'Most of the time', 'Some of the time', 'A little of the time', 'None of the time']"
+56,56,"Choose the answer that best describes how often you can find this kind of support in the past month.
+ Someone to confide in or talk to about yourself or your problems","['All of the time', 'Most of the time', 'Some of the time', 'A little of the time', 'None of the time']"
+57,57,"Choose the answer that best describes how often you can find this kind of support in the past month.
+ Someone to do things with to help you get your mind off things","['All of the time', 'Most of the time', 'Some of the time', 'A little of the time', 'None of the time']"
+58,58,"In the past 2 weeks, how often have you been bothered by the following problem?
+ Feeling nervous, anxious, or on edge","['Not at all', 'Several days', 'Over half of the days', 'Nearly every day']"
+59,59,"In the past 2 weeks, how often have you been bothered by the following problem?
+ Not being able to stop or control worrying","['Not at all', 'Several days', 'Over half of the days', 'Nearly every day']"
+60,60,"In the past 2 weeks, how often have you been bothered by the following problem?
+ Worrying too much about different things","['Not at all', 'Several days', 'Over half of the days', 'Nearly every day']"
+61,61,"In the past 2 weeks, how often have you been bothered by the following problem?
+ Trouble relaxing","['Not at all', 'Several days', 'Over half of the days', 'Nearly every day']"
+62,62,"In the past 2 weeks, how often have you been bothered by the following problem?
+ Being so restless that it's hard to sit still","['Not at all', 'Several days', 'Over half of the days', 'Nearly every day']"
+63,63,"In the past 2 weeks, how often have you been bothered by the following problem?
+ Becoming easily annoyed or irritable","['Not at all', 'Several days', 'Over half of the days', 'Nearly every day']"
+64,64,"In the past 2 weeks, how often have you been bothered by the following problem?
+ Feeling afraid as if something awful might happen","['Not at all', 'Several days', 'Over half of the days', 'Nearly every day']"
+65,65,"In the past 2 weeks, how often have you been bothered by:
+ Little interest or pleasure in doing things","['Not at all', 'Several Days', 'More than half the days', 'Nearly every day']"
+66,66,"In the past 2 weeks, how often have you been bothered by:
+ Feeling down, depressed, or hopeless","['Not at all', 'Several Days', 'More than half the days', 'Nearly every day']"
+67,67,"In the past 2 weeks, how often have you been bothered by:
+ Trouble falling or staying asleep, or sleeping too much","['Not at all', 'Several Days', 'More than half the days', 'Nearly every day']"
+68,68,"In the past 2 weeks, how often have you been bothered by:
+ Feeling tired or having little energy","['Not at all', 'Several Days', 'More than half the days', 'Nearly every day']"
+69,69,"In the past 2 weeks, how often have you been bothered by:
+ Poor appetite or overeating","['Not at all', 'Several Days', 'More than half the days', 'Nearly every day']"
+70,70,"In the past 2 weeks, how often have you been bothered by:
+ Feeling bad about yourself or that you are a failure or have let yourself or your family down","['Not at all', 'Several Days', 'More than half the days', 'Nearly every day']"
+71,71,"In the past 2 weeks, how often have you been bothered by:
+ Trouble concentrating on things, such as reading the newspaper or watching television","['Not at all', 'Several Days', 'More than half the days', 'Nearly every day']"
+72,72,"In the past 2 weeks, how often have you been bothered by:
+ Moving or speaking so slowly that other people could have noticed? Or the opposite - being so fidgety or restless that you have been moving around a lot more than usual","['Not at all', 'Several Days', 'More than half the days', 'Nearly every day']"
+73,73,"In the past 2 weeks, how often have you been bothered by:
+ Thoughts that you would be better off dead or of hurting yourself in some way","['Not at all', 'Several Days', 'More than half the days', 'Nearly every day']"
+74,74,"If this is how you feel, think about getting help. There are people who can help 24/7.
+ 
+ <a href=""sms:741741"">Text the Crisis Text Line at 741741</a> or <a href=""tel:1-800-273-8255"">Call the National Suicide Prevention Lifeline at 1-800-273-8255.</a>",
+75,75,"In the last month, how often have you been upset because of something that happened unexpectedly?","['Never', 'Almost Never', 'Sometimes', 'Fairly Often', 'Very Often']"
+76,76,"In the last month, how often have you felt that you were unable to control the important things in your life?","['Never', 'Almost Never', 'Sometimes', 'Fairly Often', 'Very Often']"
+77,77,"In the last month, how often have you felt nervous and ""stressed?""","['Never', 'Almost Never', 'Sometimes', 'Fairly Often', 'Very Often']"
+78,78,"In the last month, how often have you felt confident about your ability to handle your personal problems?","['Never', 'Almost Never', 'Sometimes', 'Fairly Often', 'Very Often']"
+79,79,"In the last month, how often have you felt that things were going your way?","['Never', 'Almost Never', 'Sometimes', 'Fairly Often', 'Very Often']"
+80,80,"In the last month, how often have you found that you could not cope with all the things that you had to do?","['Never', 'Almost Never', 'Sometimes', 'Fairly Often', 'Very Often']"
+81,81,"In the last month, how often have you been able to control irritations in your life?","['Never', 'Almost Never', 'Sometimes', 'Fairly Often', 'Very Often']"
+82,82,"In the last month, how often have you felt that you were on top of things?","['Never', 'Almost Never', 'Sometimes', 'Fairly Often', 'Very Often']"
+83,83,"In the last month, how often have you been angered because of things that were outside of your control?","['Never', 'Almost Never', 'Sometimes', 'Fairly Often', 'Very Often']"
+84,84,"In the last month, how often have you felt difficulties were piling up so high that you could not overcome them?","['Never', 'Almost Never', 'Sometimes', 'Fairly Often', 'Very Often']"
+85,85,"Think about all the vigorous activities that you did in the last 7 days. Vigorous physical activities refer to activities that take hard physical effort and make you breathe much harder than normal. Think only about those physical activities that you did for at least 10 minutes at a time.
+ 
+ During the last 7 days, did you do vigorous physical activities like heavy lifting, digging, aerobics, or fast bicycling?","['Yes', 'No']"
+86,86,How many days per week?,"[1, 2, 3, 4, 5, 6, 7]"
+87,87,How much time did you usually spend doing vigorous physical activities on one of those days (hours per day)?,"[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23]"
+88,88,How much time did you usually spend doing vigorous physical activities on one of those days (minutes per day)?,"[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59]"
+89,89,"Think about all the moderate activities that you did in the last 7 days. Moderate activities refer to activities that take moderate physical effort and make you breathe somewhat harder than normal. Think only about those physical activities that you did for at least 10 minutes at a time.
+ 
+ During the last 7 days, did you do moderate physical activity like carrying light loads, bicycling at a regular pace, or doubles tennis?","['Yes', 'No']"
+90,90,How many days per week?,"[1, 2, 3, 4, 5, 6, 7]"
+91,91,How much time did you usually spend doing moderate physical activities on one of those days (hours per day)?,"[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23]"
+92,92,How much time did you usually spend doing moderate physical activities on one of those those days (minutes per day)?,"[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59]"
+93,93,"Think about the time you spent walking in the last 7 days. This includes at work and at home, walking to travel from place to place, and any other walking that you have done solely for recreation, sport, exercise, or leisure.
+ 
+ During the last 7 days, did you walk for at least 10 minutes at a time?","['Yes', 'No']"
+94,94,How many days per week?,"[1, 2, 3, 4, 5, 6, 7]"
+95,95,How much time did you usually spend walking on one of those days (hours per day)?,"[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23]"
+96,96,How much time did you usually spend walking on one of those days (minutes per day)?,"[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59]"
+97,97,"The last question is about the time you spent sitting on weekdays during the last 7 days. Include time spent at work, at home, while doing course work and during leisure time. This may include time spent sitting at a desk, visiting friends, reading, or sitting or lying down to watch television.
+ 
+ During the last 7 days, how much time did you spend sitting on a weekday?",
+98,98,Hours per day,"[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23]"
+99,99,Minutes per day,"[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59]"
+100,100,"Choose the answer that is true for you in the past month.
+ I lack companionship","['Never', 'Rarely', 'Sometimes', 'Often']"
+101,101,"Choose the answer that is true for you in the past month.
+ There is no one I can turn to","['Never', 'Rarely', 'Sometimes', 'Often']"
+102,102,"Choose the answer that is true for you in the past month.
+ I am an outgoing person","['Never', 'Rarely', 'Sometimes', 'Often']"
+103,103,"Choose the answer that is true for you in the past month.
+ I feel left out","['Never', 'Rarely', 'Sometimes', 'Often']"
+104,104,"Choose the answer that is true for you in the past month.
+ I feel isolated from others","['Never', 'Rarely', 'Sometimes', 'Often']"
+105,105,"Choose the answer that is true for you in the past month.
+ I can find companionship when I want it","['Never', 'Rarely', 'Sometimes', 'Often']"
+106,106,"Choose the answer that is true for you in the past month.
+ I am unhappy being so withdrawn","['Never', 'Rarely', 'Sometimes', 'Often']"
+107,107,"Choose the answer that is true for you in the past month.
+ People are around me but not with me","['Never', 'Rarely', 'Sometimes', 'Often']"
+108,108,"In the past month:
+ Did you smoke tobacco/nicotine (including cigarettes, cigar, cigarillos, pipes, hookah) every day, some days, or not at all?","['Yes, Every day', 'Yes, Some days', 'Not currently, but in the past', 'No, Never', 'Prefer not to answer']"
+109,109,How long has it been since you last smoked?,
+110,110,Enter the number of weeks,"[0, 1, 2, 3]"
+111,111,Enter the number of months,"[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]"
+112,112,Enter the number of years,"[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99]"
+113,113,"In the past month:
+ Did someone in your home smoke tobacco/nicotine (including cigarettes, cigar, cigarillos, pipes, hookah) every day, some days, or not at all?","['Yes, Every day', 'Yes, Some days', 'Not currently, but in the past', 'No, Never', 'Prefer not to answer']"
+114,114,"In the past month:
+ Did you use any type of electronic nicotine product? This includes e- cigarettes, vape pens, hookah pens, personal vaporizers and mods, e-cigars, e-pipes, and e-hookahs.","['Yes, Every day', 'Yes, Some days', 'Not currently, but in the past', 'No, Never', 'Prefer not to answer']"
+115,115,How long has it been since you last used an electronic nicotine product?,
+116,116,Enter the number of weeks,"[0, 1, 2, 3]"
+117,117,Enter the number of months,"[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]"
+118,118,Enter the number of years,"[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99]"
+119,119,"In the past month:
+ How often do you have a drink containing alcohol?","['Never', 'Montly or less', '2-4 times a month', '2-3 times a week', '4 or more times a week', 'Prefer not to answer']"
+120,120,"In the past month:
+ How many standard drinks containing alcohol do you have on a typical day?","['1 or 2', '3 or 4', '5 or 6', '7 to 9', '10 or more', 'Prefer not to answer']"
+121,121,"In the past month:
+ How often do you have six or more drinks containing alcohol on one occasion?","['Never', 'Less than monthly', 'Monthly', 'Weekly', 'Daily or almost daily', 'Prefer not to answer']"
+122,122,"In the past month, have you used any of the following drugs? Select all that apply.","['Cannabis (also called marijuana', 'Synthetic marijuana or fake weed (also called K2 or Spice)', 'Cocaine (also called coke', 'Prescription stimulants (for example', 'Methamphetamine (also called meth', 'Synthetic stimulants (also called bath salts', 'Inhalants (for example', 'Prescription sedatives or prescription sleeping pills (for example', 'Hallucinogens (for example', 'Heroin', 'Prescription opioids (for example', 'None']"
+123,123,How often did you use cannabis?,"['Only a few times', '1-3 times per month', '1-5 times per week', 'Daily']"
+124,124,Did your use include smoking cannabis?,"['Yes', 'No']"
+125,125,Do you think you have used more or less cannabis in the past month than you used to?,"['Less often than usual', 'The same as usual', 'More often than usual']"
+126,126,How often did you use synthetic marijuana or fake weed?,"['Only a few times', '1-3 times per month', '1-5 times per week', 'Daily']"
+127,127,Did your use include smoking synthetic marijuana or fake weed?,"['Yes', 'No']"
+128,128,Do you think you have used more or less synthetic marijuana or fake weed in the past month than you used to?,"['Less often than usual', 'The same as usual', 'More often than usual']"
+129,129,How often did you use cocaine?,"['Only a few times', '1-3 times per month', '1-5 times per week', 'Daily']"
+130,130,Did your use include smoking cocaine?,"['Yes', 'No']"
+131,131,Do you think you have used more or less cocaine in the past month than you used to?,"['Less often than usual', 'The same as usual', 'More often than usual']"
+132,132,How often did you use prescription stimulants?,"['Only a few times', '1-3 times per month', '1-5 times per week', 'Daily']"
+133,133,Did you use prescription stimulants in any way a doctor did not direct you to use it?,"['Yes', 'No', 'None', 'Prefer not to answer']"
+134,134,Do you think you have used more or less prescription stimulants in the past month than you used to?,"['Less often than usual', 'The same as usual', 'More often than usual']"
+135,135,How often did you use methamphetamine?,"['Only a few times', '1-3 times per month', '1-5 times per week', 'Daily']"
+136,136,Did your use include smoking methamphetamine?,"['Yes', 'No']"
+137,137,Do you think you have used more or less methamphetamine in the past month than you used to?,"['Less often than usual', 'The same as usual', 'More often than usual']"
+138,138,How often did you use synthetic stimulants?,"['Only a few times', '1-3 times per month', '1-5 times per week', 'Daily']"
+139,139,Did your use include smoking synthetic stimulants?,"['Yes', 'No']"
+140,140,Do you think you have used more or less synthetic stimulants in the past month than you used to?,"['Less often than usual', 'The same as usual', 'More often than usual']"
+141,141,How often did you use inhalants?,"['Only a few times', '1-3 times per month', '1-5 times per week', 'Daily']"
+142,142,Do you think you have used more or less inhalants in the past month than you used to?,"['Less often than usual', 'The same as usual', 'More often than usual']"
+143,143,How often did you use prescription sedatives or prescription sleeping pills?,"['Only a few times', '1-3 times per month', '1-5 times per week', 'Daily']"
+144,144,Did you use prescription sedatives or prescription sleeping pills in any way a doctor did not direct you to use it?,"['Yes', 'No', 'None', 'Prefer not to answer']"
+145,145,Do you think you have used more or less prescription sedatives or prescription sleeping pills in the past month than you used to?,"['Less often than usual', 'The same as usual', 'More often than usual']"
+146,146,How often did you use hallucinogens?,"['Only a few times', '1-3 times per month', '1-5 times per week', 'Daily']"
+147,147,Did your use include smoking hallucinogens?,"['Yes', 'No']"
+148,148,Do you think you have used more or less hallucinogens in the past month than you used to?,"['Less often than usual', 'The same as usual', 'More often than usual']"
+149,149,How often did you use heroin?,"['Only a few times', '1-3 times per month', '1-5 times per week', 'Daily']"
+150,150,Did your use include smoking heroin?,"['Yes', 'No']"
+151,151,Do you think you have used more or less heroin in the past month than you used to?,"['Less often than usual', 'The same as usual', 'More often than usual']"
+152,152,Did you use prescription opioids in any way a doctor did not direct you to use it?,"['Yes', 'No', 'None', 'Prefer not to answer']"
+153,153,How often did you use prescription opioids?,"['Only a few times', '1-3 times per month', '1-5 times per week', 'Daily']"
+154,154,Did your use include smoking prescription opioids?,"['Yes', 'No']"
+155,155,Do you think you have used more or less prescription opioids in the past month than you used to?,"['Less often than usual', 'The same as usual', 'More often than usual']"
+156,156,Other substance - please specify,"['drug1', 'drug2', 'drug3']"
+157,157,How often did you use the other substance?,"['Only a few times', '1-3 times per month', '1-5 times per week', 'Daily']"
+158,158,Did your use include smoking the other substance?,"['Yes', 'No']"
+159,159,Do you think you have used more or less of the other substance in the past month than you used to?,"['Less often than usual', 'The same as usual', 'More often than usual']"
+160,160,"Please select the response that best reflects your behavior in the past month.
+ I look for creative ways to alter difficult situations.","['Does not describe me at all', 'Does not describe me Neutral', 'Describes me', 'Describes me very well']"
+161,161,"Please select the response that best reflects your behavior in the past month.
+ Regardless of what happens to me, I believe I can control my reaction to it.","['Does not describe me at all', 'Does not describe me Neutral', 'Describes me', 'Describes me very well']"
+162,162,"Please select the response that best reflects your behavior in the past month.
+ I believe I can grow in positive ways by dealing with difficult situations.","['Does not describe me at all', 'Does not describe me Neutral', 'Describes me', 'Describes me very well']"
+163,163,"Please select the response that best reflects your behavior in the past month.
+ I actively look for ways to replace the losses I encounter in life.","['Does not describe me at all', 'Does not describe me Neutral', 'Describes me', 'Describes me very well']"
+164,164,"In your day-to-day life, how often did this happen to you during the past month?
+ You are treated with less courtesy than other people are.","['Almost everyday', 'At least once a week', 'A few times a month', 'Never']"
+165,165,"In your day-to-day life, how often did this happen to you during the past month?
+ You are treated with less respect than other people are.","['Almost everyday', 'At least once a week', 'A few times a month', 'Never']"
+166,166,"In your day-to-day life, how often did this happen to you during the past month?
+ You receive poorer service than other people at restaurants or stores.","['Almost everyday', 'At least once a week', 'A few times a month', 'Never']"
+167,167,"In your day-to-day life, how often did this happen to you during the past month?
+ People act as if they think you are not smart.","['Almost everyday', 'At least once a week', 'A few times a month', 'Never']"
+168,168,"In your day-to-day life, how often did this happen to you during the past month?
+ People act as if they are afraid of you.","['Almost everyday', 'At least once a week', 'A few times a month', 'Never']"
+169,169,"In your day-to-day life, how often did this happen to you during the past month?
+ People act as if they think you are dishonest.","['Almost everyday', 'At least once a week', 'A few times a month', 'Never']"
+170,170,"In your day-to-day life, how often did this happen to you during the past month?
+ People act as if they're better than you are.","['Almost everyday', 'At least once a week', 'A few times a month', 'Never']"
+171,171,"In your day-to-day life, how often did this happen to you during the past month?
+ You are called names or insulted.","['Almost everyday', 'At least once a week', 'A few times a month', 'Never']"
+172,172,"In your day-to-day life, how often did this happen to you during the past month?
+ You are threatened or harassed.","['Almost everyday', 'At least once a week', 'A few times a month', 'Never']"
+173,173,What do you think is the main reason for these experiences? Select all that apply.,"['Your gender', 'Some other aspect of your physical appearance', 'Your ancestry or national origins', 'Your education or income level', 'Your religion', 'Your sexual orientation', 'Your weight', 'Your height', 'Your age', 'Your race']"
+174,174,Other reason - please specify.,text
+175,175,How many times were you tested?,"['Never', 'Once', '2 - 5 times', 'More than 5 times']"
+176,176,Do you personally know someone who has died of COVID-19?,"['Yes', 'No', 'Not Sure', 'Prefer Not to Answer']"
+177,177,Who do you know who has died? Check all that apply.,"['Spouse, partner, boyfriend, girlfriend', 'Parent', 'Grandparent', 'Child', 'Sibling (brother or sister)', 'Co-worker', 'Friend', 'Neighbor']"
+178,178,Please specify.,text

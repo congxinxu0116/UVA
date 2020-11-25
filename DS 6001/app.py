@@ -1,4 +1,3 @@
-# https://dash.plotly.com/dash-core-components/tabs
 import numpy as np
 import statsmodels
 import pandas as pd
@@ -7,7 +6,8 @@ import plotly.express as px
 import plotly.graph_objects as go
 import plotly.figure_factory as ff
 import dash
-from jupyter_dash import JupyterDash
+# from jupyter_dash import JupyterDash
+import dash_bootstrap_components as dbc
 import dash_core_components as dcc
 import dash_html_components as html
 from dash.dependencies import Input, Output
@@ -16,7 +16,8 @@ external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 gss = pd.read_csv("https://github.com/jkropko/DS-6001/raw/master/localdata/gss2018.csv",
                   encoding='cp1252', 
                   na_values=['IAP','IAP,DK,NA,uncodeable', 'NOT SURE',
-                             'DK', 'IAP, DK, NA, uncodeable', '.a', "CAN'T CHOOSE"])
+                             'DK', 'IAP, DK, NA, uncodeable', '.a', "CAN'T CHOOSE"],
+                  low_memory=False)
 
 mycols = ['id', 'wtss', 'sex', 'educ', 'region', 'age', 'coninc',
           'prestg10', 'mapres10', 'papres10', 'sei10', 'satjob',
@@ -124,7 +125,7 @@ fig6.update_layout(showlegend=False)
 bar_columns = ['satjob', 'relationship', 'male_breadwinner', 'men_bettersuited', 'child_suffer', 'men_overwork'] 
 group_columns = ['sex', 'region', 'education'] 
 
-app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
+app = dash.Dash(__name__, external_stylesheets=[dbc.themes.CYBORG])
 server = app.server
 # app = JupyterDash(__name__, external_stylesheets=external_stylesheets)
 
@@ -199,5 +200,6 @@ def make_figure(bar, group):
     return px.bar(table3, x=bar, y='count', color = group, barmode = 'group')
 
 if __name__ == '__main__':
-    app.run_server(debug=True, port=8051, host='0.0.0.0')
-    # app.run_server(mode='inline', debug=True, port=1234)
+#     app.run_server(debug=True, port=8051, host='0.0.0.0')
+#     app.run_server(mode='inline', debug=True, port=1234)
+    app.run_server(debug=True)

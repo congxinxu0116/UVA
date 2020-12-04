@@ -1,0 +1,380 @@
+---
+title: "XGBoost Hyperparameter Tuning"
+author: "Congxin (David) Xu"
+date: "12/1/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(xgboost)
+library(caret)
+library(tidyverse)
+library(ParBayesianOptimization)
+# https://www.kaggle.com/srwilson7601/autoencoders-bayesian-optimization-and-xgboost
+# https://codingwiththomas.blogspot.com/2016/03/xgboost-validation-and-early-stopping.html
+# https://www.kaggle.com/pelkoja/visual-xgboost-tuning-with-caret
+```
+
+
+
+```{r Clean Up Environment 1, echo=FALSE, include=FALSE}
+rm(list = ls())
+gc()
+```
+
+## Hyperparameter Tuning
+
+What makes XGBoost powerful is its flexibility. We have demonstrated that we can use XGBoost to solve regression type of problems as well as classifications. Under each use case, we can further improve our forecast accuracy by setting the right hyperparameters for the XGBoost model. The process of finding the right hyperparameters is called Hyperparameter tuning. There are currently 3 different ways to perform hyperparameter tuning: 
+
+1. Early Stop
+2. Grid Search/Random Search
+3. Bayesian Optimization 
+
+### Early Stop 
+
+The idea of early stopping is that we can set the learning rate, `eta`, to be a relatively low value and the number of boosting iterations, `nrounds`, to be a very high value. Then, we can kick off the XGBoost and let it run until the the number of boosting iterations is either equal to `nrounds` or the evaluation metrics on the hold out data is not improving for certain number of iterations. The advantage of using this method is that it guarantees that we will be able to find the best model based on the hold out data and the evaluation metrics we choose, as long as we set `nrounds` to be a very large number. The obvious disadvantage is that we do not know when optimal iteration will occur. It could take a long time to find the optimal settings. Another disadvantage is that this method can only tune the `nrounds` hyperparameter. We have to manually set up other hyperparameters like `eta` and `max_depth`. Here we will re-use the diabetes-classification data to build out a demonstration.
+
+```{r XGBoost HP Early Stop Set Up}
+# Data Read In
+full_data = read.csv("train.csv")
+submission_test = read.csv("test.csv")
+
+# Set the seed so our train test split is reproducible
+set.seed(1212)
+inTrain = createDataPartition(y = full_data$diabetes,
+                              p = 0.8,
+                              list = FALSE)
+
+# Training Data
+train =  as.matrix(full_data[inTrain,]) #we need to save the data as matrix to later covert to a dmatrix
+train_x = train[,2:9] 
+train_y = train[,10, drop=FALSE]
+
+# Testing Data
+test = as.matrix(full_data[-inTrain,]) #we need to save the data as matrix to later covert to a dmatrix
+test_x = test[,2:9]
+test_y = test[,10, drop=FALSE] 
+
+# Convert data frame to dmatrix
+dtrain = xgb.DMatrix(data = train_x, label= train_y)
+dtest = xgb.DMatrix(data = test_x, label= test_y)
+```
+ 
+What we need to do next is to build 
+
+- `watch_list`: a watch list to compare the evaluation metrics in our training and holdout(test) data
+- `param_list`: a list of hyperparameters that we are going to set for this model
+
+Given the number of observations for the training data is less than 500, we are going to set the maximum depths of the tree to be 20 and the learning rate to be 0.01. 
+
+```{r XGBoost HP Early Stop}
+watch_list <- list(validation = dtest, train = dtrain)
+
+param_list <- list(
+  objective = "binary:logistic",
+  eta = 0.01,
+  max_depth = 20
+)
+```
+
+After setting up the `watch_list` and `param_list`, we will set up the early stop metrics within XGBoost and kick it off:
+```{r XGBoost Early Stop Modeling}
+model_early_stop <- xgb.train(
+  data = dtrain,
+  params = param_list,
+  watchlist = watch_list,
+  nrounds = 5000,
+  eval_metric = 'logloss',
+  print_every_n = 10,
+  verbose = 1,
+  callbacks = list(cb.early.stop(10, metric_name = 'validation_logloss'))
+)
+```
+From the log of training process, we can see that the `logloss` for the validation data at iteration 171 is higher than that at iteration 161 (0.509711 > 0.509181). Therefore, our early stop metric was triggered and stopped the training process. The best iteration was achieved at iteration 161 and all parameters associated from that iteration are stored into the `model_early_stop` variable.
+
+
+The last step is to compare the forecast accuracy for the best iteration Early Stop found and the forecast accuracy we had previously. 
+
+```{r XGBoost Early Stop Submission}
+# Subset the submission test set to only the predictors 
+submission_data = as.matrix(submission_test[,2:9])
+
+# Create predictions using out model on the submission test data
+Kaggel_pred = predict(model_early_stop, submission_data)
+Kaggel_predictions = as.numeric(Kaggel_pred > 0.5)
+
+
+# Bind the column of the subject ID and our prediction 
+submission = cbind(submission_test[,1] , Kaggel_predictions)
+colnames(submission) = c('p_id','diabetes')
+
+# Write the predictions to the submission.csv file 	
+write.csv(submission, 'submission_early_stop.csv', row.names=FALSE)
+```
+
+After uploading the submission CSV files to Kaggle, we are able to get the forecast accuracy scores. The forecast accuracy from the previous model is 0.71428, which means that $0.71428 * 154 = 110$ of our predictions are correct. Our new XGBoost model with early stop get 0.77272, which means that $0.77272 * 154 = 119$ of our predictions are correct. By using Early Stop metric, we improved our forecast accuracy by $(119 - 110) / 110 \approx 8.18\%$. Early Stop works is very easy to implement and works very well when we do not care about the running time. Because it only focused on tuning the `nround` parameter, we should incorporate Early Stop with other hyperparameter tuning methods.
+
+
+```{r Clean Up Environment 2, echo=FALSE, include=FALSE}
+rm(list = ls())
+gc()
+```
+
+### Grid Search/Random Search
+
+You can think of the idea of Grid Search as a very basic brute force search with nested for loops. We first need to define the range for each hyperparameter that we are going to run through and run the XGBoost model through every single combination of the candidate hyperparameters. Luckily, we have the `caret` package that can do a lot of the heavy lifting for us and we just need to correctly set up the model. Here we are going to use the data from the regression tutorial for the Grid Search Example.
+
+```{r XGBoost Grid Search Set Up, message=FALSE, warning=FALSE}
+# Load data from CSV
+data1 <- read_csv('energy_data.csv')
+
+# Ensure X8 and X6 are factors
+data1$X8 <- as.factor(data1$X8)
+data1$X6 <- as.factor(data1$X6)
+
+# Create dummy variables
+dummies <- dummyVars( ~ ., data = data1)
+data2 <- predict(dummies, newdata = data1)
+
+# Create Training Partition
+data2 <- data2 %>% as.data.frame() %>%  filter(!is.na(Y1))
+data2[is.na(data2)] <- 0
+inTrain <- createDataPartition(y = data2$Y1, p = 0.8, list = FALSE)
+
+# Training data
+train_x = data2[inTrain, 1:16] %>% as.matrix()
+train_y = data2[inTrain, 17, drop = FALSE]%>% as.matrix()
+
+# Testing Data
+test_x = data2[-inTrain, 1:16] %>% as.matrix()
+test_y = data2[-inTrain, 17, drop = FALSE] %>% as.matrix()
+
+# Convert training and testing data to XGBoost Matrix
+dtrain = xgb.DMatrix(data = train_x, label = train_y)
+dtest = xgb.DMatrix(data = test_x, label= test_y)
+
+```
+
+Setting up the Grid Search Modeling Procedure
+
+```{r XGBoost Grid Search Modeling, message=FALSE}
+# Reference: https://www.kaggle.com/silverstone1903/xgboost-grid-search-r
+# Set the Tuning Grid 
+tune_grid <- expand.grid(nrounds = 5000,
+                         max_depth =  c(10, 15, 20), # Set max_depth to be 10, 15 and 20
+                         eta = c(0.05, 0.1),         # Set eta to be 10, 15 and 20
+                         gamma = c(0),
+                         colsample_bytree = c(1),
+                         min_child_weight = c(1),
+                         subsample = c(1))
+
+# Grid Search with Early Stop
+rmseHyperparameters <- apply(tune_grid, 1, function(parameterList) {
+  
+  # Extract Parameters to test
+  currentNrounds <- parameterList[["nrounds"]]
+  currentSubsampleRate <- parameterList[["subsample"]]
+  currentColsampleRate <- parameterList[["colsample_bytree"]]
+  currentDepth <- parameterList[["max_depth"]]
+  currentEta <- parameterList[["eta"]]
+  currentMinChild <- parameterList[["min_child_weight"]]
+  
+  # Initiate XGBoost with Cross Validation
+  xgboostModelCV <- xgb.cv(data =  dtrain, 
+                           nrounds = currentNrounds, 
+                           max_depth = currentDepth, 
+                           eta = currentEta,
+                           subsample = currentSubsampleRate, 
+                           colsample_bytree = currentColsampleRate, 
+                           min_child_weight = currentMinChild, 
+                           nfold = 5,
+                           objective = "reg:squarederror",
+                           booster = "gbtree",
+                           verbose = F,                                # Turning Off verbose for reporting
+                           print_every_n = 10,
+                           eval_metric = "rmse",
+                           early_stopping_rounds = 10)
+  
+  # Extract the training information from evaluation log
+  xvalidationScores <- as.data.frame(xgboostModelCV$evaluation_log)
+  test_rmse <- tail(xvalidationScores$test_rmse_mean, 1)
+  train_rmse <- tail(xvalidationScores$train_rmse_mean, 1)
+  
+  # Return the forecast accuracy and hyperparameters
+  output <- return(c(test_rmse, 
+                     train_rmse, 
+                     currentSubsampleRate, 
+                     currentColsampleRate, 
+                     currentDepth, 
+                     currentEta, 
+                     currentMinChild))})
+
+# Pivot Data and Clean Up for Display
+results <- data.frame(t(rmseHyperparameters))
+colnames(results) <- c("test_rmse", "train_rmse", "subsample", "colsample_bytree", "max_depth", "eta", "min_child_weight")
+
+# Print Out the Final Output
+results %>% arrange(test_rmse)
+```
+
+### Bayesian Optimization
+
+Because Grid Search usually takes a very long to run, researchers have developed a more efficient way called Bayesian Optimization to tune the hyperparameter for XGBoost. We will not go over the mathematics behind Bayesian Optimization in this tutorial. If you are curious, you can go to this [GitHub Repo](https://github.com/AnotherSamWilson/ParBayesianOptimization) and review the code in detail. The intuition behind Bayesian Optimization is that we would use the information from the previous model evaluations to guide us in our future parameter searches.
+
+```{r Clean Up Environment 3, echo=FALSE, include=FALSE}
+rm(list = ls())
+gc()
+```
+
+
+
+```{r Bayesian Optimization Set Up}
+# Data Read In
+full_data = read.csv("train.csv")
+submission_test = read.csv("test.csv")
+
+# Set the seed so our train test split is reproducible
+set.seed(1212)
+inTrain = createDataPartition(y = full_data$diabetes,
+                              p = 0.8,
+                              list = FALSE)
+
+# Training Data
+train =  as.matrix(full_data[inTrain,]) #we need to save the data as matrix to later covert to a dmatrix
+train_x = train[,2:9] 
+train_y = train[,10, drop=FALSE]
+
+# Testing Data
+test = as.matrix(full_data[-inTrain,]) #we need to save the data as matrix to later covert to a dmatrix
+test_x = test[,2:9]
+test_y = test[,10, drop=FALSE] 
+
+# Convert data frame to dmatrix
+dtest = xgb.DMatrix(data = test_x, label= test_y)
+```
+
+
+```{r}
+scoringFunction <- function(max_depth, 
+                            min_child_weight, 
+                            subsample) {
+    
+  dtrain = xgb.DMatrix(data = train_x, label= train_y)
+  
+  Pars <- list(
+    booster = "gbtree",
+    eta = 0.01,
+    max_depth = round(max_depth, 0),
+    min_child_weight = min_child_weight,
+    subsample = subsample,
+    objective = "binary:logistic",
+    eval_metric = "logloss"
+  )
+  
+  set.seed(666)
+
+  xgbcv <- xgb.cv(
+    params = Pars,
+    data = dtrain,
+    nround = 5000,
+    nfold = 5,
+    # maximize = TRUE,
+    early_stopping_rounds = 10,
+    verbose = 1
+  )
+  
+  return(list(Score = max(xgbcv$evaluation_log$test_logloss_mean), nrounds = xgbcv$best_iteration))
+}
+
+bounds <- list( 
+    max_depth = c(10, 20), 
+    min_child_weight = c(0, 5), 
+    subsample = c(0.25, 1)
+)
+```
+
+
+
+```{r}
+optObj <- bayesOpt(
+  FUN = scoringFunction,
+  bounds = bounds,
+  initPoints = 4,
+  iters.n = 4, 
+  iters.k = 1
+)
+
+optObj$scoreSummary %>% arrange(Score)
+```
+Rerun the XGBoost model with the best parameters we found
+```{r}
+dtrain = xgb.DMatrix(data = train_x, label= train_y)
+watch_list <- list(validation = dtest, train = dtrain)
+
+best_hp <- optObj$scoreSummary %>% filter(Score == min(Score))
+
+Pars <- list(
+  booster = "gbtree",
+  eta = 0.01,
+  max_depth = best_hp$max_depth,
+  min_child_weight = best_hp$min_child_weight,
+  subsample = best_hp$subsample,
+  objective = "binary:logistic",
+  eval_metric = "logloss"
+)
+
+
+model_early_stop <- xgb.train(
+  data = dtrain,
+  params = Pars,
+  watchlist = watch_list,
+  nround = 5000,
+  early_stopping_rounds = 10,
+  verbose = 0,
+  callbacks = list(cb.early.stop(10, metric_name = 'validation_logloss'))
+)
+```
+
+```{r}
+# Subset the submission test set to only the predictors 
+submission_data = as.matrix(submission_test[,2:9])
+
+# Create predictions using out model on the submission test data
+Kaggel_pred = predict(model_early_stop, submission_data)
+Kaggel_predictions = as.numeric(Kaggel_pred > 0.5)
+
+
+# Bind the column of the subject ID and our prediction 
+submission = cbind(submission_test[,1] , Kaggel_predictions)
+colnames(submission) = c('p_id','diabetes')
+
+# Write the predictions to the submission.csv file 	
+write.csv(submission, 'submission_bayes.csv', row.names=FALSE)
+```
+
+
+According to the [XGBoost documentation](https://xgboost.readthedocs.io/en/latest//parameter.html#), there are 4 types of parameters:
+
+1. General parameters
+2. Booster parameters
+3. Learning task parameters
+4. Command line parameters
+
+For this tutorial, we only going to mainly focus on tuning the **Booster parameters**, as they will have a large impact on the final results. General parameters and Learning task parameters will depend on the type of questions we are solving. Normally, we are going to set those parameters as a fixed value based on the requirement or the system. We will not cover Command line parameters as they are used to run the XGBoost model from command line. 
+
+### General Parameters
+Even though general parameters are not going to cause an big effect on the model, we will would like to set them correctly. We will discuss two General Parameters:
+
+- `nthread`: As we stated in the Introduction section above, `nthread` is the number of CPU threads to use. We recommend that to set this value to be the total number of cores minus 1. In this way, we can optimize the performance of the computer/server while leaving 1 processor for other tasks. The function `detectCores()` from the `parallel` package can return the number of cores on your computer/server. Therefore, we can set `nthread = parallel::detectCores() - 1`
+
+- `verbosity`: This parameter controls the verbosity of printing message while training the model. Valid values are 0 (silent), 1 (warning), 2 (info), 3 (debug). If you are using XGBoost for production purposes or running R from command line, we recommend that you set this to **0**, as the training process will not likely matter to you. However, if you are manually running the model or doing hyperparameter tuning, we recommend that you set this to be **1** or **2**. 
+
+### Learning Task Parameters
+Learning Task Parameters depends on the tasks we are running. 
+
+
+
+
+
+

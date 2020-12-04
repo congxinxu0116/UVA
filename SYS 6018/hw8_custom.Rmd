@@ -1,0 +1,389 @@
+---
+title: "Homework 8 Kaggle Competition"
+---
+#### Congxin (David) Xu
+#### Computing ID: cx2rx
+
+**SYS 6018 | Fall 2020 | University of Virginia **
+
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(error=TRUE,        # Keep compiling upon error
+                      collapse=FALSE,    # collapse by default
+                      echo=TRUE,         # echo code by default
+                      comment = "#>",    # change comment character
+                      fig.width = 5,     # set figure width
+                      fig.align = "center",# set figure position
+                      out.width = "49%", # set width of displayed images
+                      warning=TRUE,      # show R warnings
+                      message=TRUE)      # show R messages
+options(dplyr.summarise.inform = FALSE)  # ignore message about group structure
+```
+
+### Load the packages
+```{r Library, message=FALSE}
+library(tidyverse)
+library(h2o)
+library(xgboost)
+library(caret)
+library(glmnet)
+```
+
+### Data Read In
+```{r, message=FALSE}
+train <- read_csv('.\\house-prices-advanced-regression-techniques\\train.csv') # 1460
+test <- read_csv('.\\house-prices-advanced-regression-techniques\\test.csv') # Id start with 1461
+test$SalePrice <- 1
+data <- bind_rows(train, test)
+rm(train, test)
+gc()
+```
+
+### Feature Engineering:
+
+- Categorical, convert to factor and dummayVars
+  - MSSubClass
+  - MSZoning
+  - Street
+  - Alley
+  - LotShape
+  - LandContour
+  - LotConfig
+  - LandSlope
+  - Neighborhood
+  - BldgType
+  - HouseStyle
+  - OverallQual
+  - OverallCond
+  - RoofStyle
+  - Exterior1st
+  - MasVnrType
+  - ExterQual
+  - Foundation
+  - BsmtQual
+  - BsmtExposure
+  - BsmtFinType1
+  - HeatingQC
+  - CentralAir
+  - FullBath
+  - BedroomAbvGr
+  - KitchenQual
+  - TotRmsAbvGrd
+  - Fireplaces
+  - FireplaceQu
+  - GarageType
+  - GarageFinish
+  - GarageCars
+  - Fence
+  - SaleType
+  - SaleCondition
+
+- Numeric, need to fill NA 
+  - LotFrontage, 17% NA, fill with average
+  - MasVnrArea, 8 NAs, fill with 0
+
+- Numeric, no NA
+  - log(LotArea)
+  - YearBuilt
+  - log(BsmtFinSF1 + 1)
+  - BsmtUnfSF
+  - TotalBsmtSF
+  - `1stFlrSF`
+  - 2ndFlrSF
+  - GrLivArea
+  - GarageArea
+  -
+  
+- Not important features to delete
+  - Utilities
+  - Condition2  
+  - Condition1 
+  - YearRemodAdd
+  - RoofMatl
+  - Exterior2nd
+  - BsmtCond
+  - BsmtFinType2
+  - BsmtFinSF2
+  - BsmtUnfSF
+  - Heating
+  - Electrical
+  - LowQualFinSF
+  - BsmtFullBath
+  - Functional
+  - KitchenAbvGr
+  - GarageYrBlt
+  - GarageQual
+  - GarageCond
+  - PavedDrive
+  - WoodDeckSF
+  - OpenPorchSF
+  - `3SsnPorch`
+  - EnclosedPorch
+  - PoolArea
+  - PoolQC
+  - MiscFeature
+  - MiscVal
+  - YrSold
+  - MoSold
+
+
+```{r}
+# Handle Categorical Variables
+data <- data %>%
+  mutate_at(
+    vars(
+      MSSubClass,
+      MSZoning,
+      LotShape,
+      LandContour,
+      LotConfig,
+      LandSlope,
+      Neighborhood,
+      BldgType,
+      HouseStyle,
+      OverallQual,
+      OverallCond,
+      RoofStyle,
+      Exterior1st,
+      MasVnrType,
+      ExterQual,
+      Foundation,
+      BsmtQual,
+      BsmtExposure,
+      BsmtFinType1,
+      HeatingQC,
+      CentralAir,
+      FullBath,
+      BedroomAbvGr,
+      KitchenQual,
+      TotRmsAbvGrd,
+      Fireplaces,
+      FireplaceQu,
+      GarageType,
+      GarageFinish,
+      GarageCars,
+      Fence,
+      SaleType,
+      SaleCondition
+    ),
+    ~ as.factor(as.character(ifelse(is.na(.), "Not Found", .)))
+  ) %>% 
+  mutate(
+    LotArea = log(LotArea),
+    BsmtFinSF1 = log(BsmtFinSF1 + 1),
+    LotFrontage = ifelse(is.na(LotFrontage), mean(LotFrontage, na.rm = T), LotFrontage),
+    MasVnrArea = ifelse(is.na(MasVnrArea), 0, MasVnrArea),
+    SalePrice = log(SalePrice)
+  ) %>%
+  select(
+    -c(
+      Alley,
+      Street,
+      Utilities,
+      Condition2,
+      Condition1,
+      YearRemodAdd,
+      RoofMatl,
+      Exterior2nd,
+      BsmtCond,
+      BsmtFinType2,
+      BsmtFinSF2,
+      BsmtUnfSF,
+      Heating,
+      Electrical,
+      LowQualFinSF,
+      BsmtFullBath,
+      Functional,
+      KitchenAbvGr,
+      GarageYrBlt,
+      GarageQual,
+      GarageCond,
+      PavedDrive,
+      WoodDeckSF,
+      OpenPorchSF,
+      `3SsnPorch`,
+      EnclosedPorch,
+      PoolArea,
+      PoolQC,
+      MiscFeature,
+      MiscVal,
+      YrSold,
+      MoSold
+    )
+  )
+
+summary(data)
+```
+
+
+```{r}
+# One hot encoding
+dmy <- dummyVars(" ~ .", data = data)
+data <- data.frame(predict(dmy, newdata = data))
+
+train <- data %>% filter(Id <= 1460)
+test <- data %>% filter(Id > 1460)
+rm(data, dmy)
+gc()
+```
+
+
+### Modeling 
+- Loss Function: RMSE
+Plan: Ensemble of 4 models 
+1. Penalized Linear Regression
+2. Random Forest
+3. XGBoost
+4. 
+
+
+```{r Penalized Linear Regression}
+
+penalized_linear <- function(train, test) {
+  
+  # Control Randomness
+  set.seed(666) 
+  
+  # Define Training data 
+  X.train = train %>% select(-c(SalePrice, Id)) %>% as.matrix()
+  Y.train = train %>% select(SalePrice) %>% as.matrix()
+  
+  # Cross Validation Setting
+  n.folds <- 10
+  fold <- sample(rep(1:n.folds, length = nrow(X.train)))
+  
+  # Pre-defined setting
+  alpha <- seq(0, 0.05, 0.001)
+  
+  # Create a empty list to store results
+  output <- list()
+  
+  # Finding the best alpha
+  for (m in 1:length(alpha)) {
+  
+      # Build model using CV 
+      model <- cv.glmnet(x = X.train, y = Y.train, foldid = fold, alpha = alpha[m])
+      
+      # Store the data into output
+      output[[m]] <- data.frame(alpha = alpha[m], 
+                                lambda = model$lambda.1se,
+                                mse = model$cvm[which(model$lambda == model$lambda.1se)])
+    
+  }
+  
+  # Convert list back to data frame
+  output <- bind_rows(output)
+  
+  final_model <- cv.glmnet(x = X.train, y = Y.train, foldid = fold, alpha = output$alpha[which(output$mse == min(output$mse))])
+  
+  X.test <- test %>% select(-c(SalePrice, Id)) %>% as.matrix()
+  # Make Predictions
+  test$SalePrice <- predict(final_model, newx = X.test, s = 'lambda.1se')
+  
+  # Write out the submission - contain 2 NAs, odd...
+  submission <- test %>% 
+    select(Id, SalePrice) %>% 
+    mutate(SalePrice = exp(SalePrice))
+  
+  return(submission)
+}
+# sub1 <- penalized_linear(train, test)
+```
+
+
+```{r h2o Random Forest}
+random_forest <- function(train, test) {
+  
+  h2o.init(nthreads = -1, max_mem_size = '12G')
+  trainHex <- as.h2o(train)
+  features <- colnames(train)[!(colnames(train) %in% c("Id", "SalePrice"))]
+  ## Train a random forest using all default parameters
+  rfHex <- h2o.randomForest(
+    x = features,
+    y = "SalePrice",
+    ntrees = 200,
+    max_depth = 50,
+    nfolds = 5,
+    seed = 666,
+    mtries = 100,
+    training_frame = trainHex
+  )
+  testHex <- as.h2o(test)
+  test$SalePrice <- as.vector(h2o.predict(rfHex, testHex))
+  submission <- test %>% 
+      select(Id, SalePrice) %>% 
+      mutate(SalePrice = exp(SalePrice))
+  h2o.shutdown(prompt = F)
+  
+  return(submission)
+}
+# sub2 <- random_forest(train, test)
+```
+
+```{r XGBoost}
+xgb <- function(train, test) {
+    
+  set.seed(666)
+  h <- sample(nrow(train), nrow(train) * 0.9)
+  features <- colnames(train)[!(colnames(train) %in% c("Id", "SalePrice"))]
+  
+  # Out of sample Validation 
+  dval <- train[-h,]
+  dval <- xgb.DMatrix(data = data.matrix(dval[, features]), label = dval %>% select(SalePrice) %>% data.matrix())
+  
+  # Training data 75%
+  dtrain <- train[h,]
+  dtrain <- xgb.DMatrix(data = data.matrix(dtrain[, features]), label = dtrain %>% select(SalePrice) %>% data.matrix())
+  
+  # Test data
+  dtest <- test %>% 
+    select(features) %>% 
+    data.matrix()
+  
+  # Watch List
+  watchlist <- list(val = dval,train = dtrain)
+  
+  # XGboost Training 
+  model <- xgb.train( tree_method            = 'hist',
+                      nthreads               = 6,
+                      data                   = dtrain,
+                      nrounds                = 5000,
+                      eta                    = 0.005,   
+                      max_depth              = 100, 
+                      grow_policy            = 'depthwise',
+                      subsample              = 0.75,
+                      gamma                  = 3,
+                      watchlist              = watchlist,
+                      print_every_n          = 10,  
+                      verbose                = 1,
+                      callbacks = list(cb.early.stop(10, metric_name = 'val_rmse')))
+  
+  test$SalePrice <- predict(model, dtest)
+  
+  submission <- test %>% 
+        select(Id, SalePrice) %>% 
+        mutate(SalePrice = exp(SalePrice))
+  
+  return(submission)
+}
+# sub3 <- xgb(train, test)
+```
+
+
+```{r, message=FALSE}
+sub1 <- penalized_linear(train = train, test = test)
+sub2 <- random_forest(train = train, test = test)
+sub3 <- xgb(train = train, test = test)
+
+final <- sub1 %>% 
+  inner_join(sub2, by = 'Id') %>% 
+  inner_join(sub3, by = 'Id')
+
+x = rowMeans(final %>% select(-Id), na.rm = T)
+
+final <- final %>% 
+  select(Id) %>% 
+  mutate(SalePrice = x)
+
+write_csv(final, 'final_submission.csv')
+```
+

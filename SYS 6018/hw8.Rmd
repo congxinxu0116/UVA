@@ -1,0 +1,224 @@
+---
+title: 'Homework #8'
+---
+
+#### Congxin (David) Xu
+#### Computing ID: cx2rx
+
+**SYS 6018 | Fall 2020 | University of Virginia **
+
+*******************************************
+
+<!--- Below are global settings for knitr. You can override any of them by adding the changes to individual chunks --->
+
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(error=TRUE,        # Keep compiling upon error
+                      collapse=FALSE,    # collapse by default
+                      echo=TRUE,         # echo code by default
+                      comment = "#>",    # change comment character
+                      fig.width = 5,     # set figure width
+                      fig.align = "center",# set figure position
+                      out.width = "49%", # set width of displayed images
+                      warning=TRUE,      # show R warnings
+                      message=TRUE)      # show R messages
+options(dplyr.summarise.inform = FALSE)  # ignore message about group structure
+```
+
+<!--- Solution Region --->
+```{css solution-region, echo=FALSE}
+.solution {
+  background-color: #232D4B10;
+  border-style: solid;
+  border-color: #232D4B;
+  padding: .5em;
+  margin: 20px
+}
+```
+
+
+<!--- Load Required R packages here --->
+```{r packages, include=FALSE}
+#- Better table printing
+library(kableExtra) # https://haozhu233.github.io/kableExtra/awesome_table_in_html.html
+format_table <- function(x, nmax=10) {
+  kable(x) %>% 
+    kable_styling(full_width = FALSE, font_size=11, position = "left") %>% 
+    {if(nrow(x) > nmax) scroll_box(., width = "100%", height = "200px") else .}
+}
+#- useful functions
+digits <- function(x, k=2) format(round(x, k), nsmall=k)
+#- data directory
+data.dir = 'https://mdporter.github.io/SYS6018/data/'
+#- required functions here
+library(h2o)
+library(tidyverse)
+library(caret)
+```
+
+
+
+
+### Problem 8: Kaggle 
+
+We have officially ended our coverage of supervised learning. Let's cap it off with a Kaggle contest. 
+
+You are to make at least one official entry in the [House Prices: Advanced Regression Techniques](https://www.kaggle.com/c/house-prices-advanced-regression-techniques/overview) Kaggle contest. 
+
+- You will need to register in Kaggle (its free)
+- Read the details of the contest. Understand the data and evaluation function.
+- Make at least one submission
+- If you get a score on the public leaderboard of $<0.50$, you receive full credit, otherwise, you'll lose 10 points. 
+    - I'll allow [teaming](https://www.kaggle.com/c/house-prices-advanced-regression-techniques/team) to achieve the score, but only if everyone on the team produces a model that is used to generate the final submission (e.g., stacking or model averaging)
+- Submit your code on collab
+- Report your kaggle name (or team name) so we can ensure you had a valid submission. 
+- Top 5 scores get 2 bonus points
+    - Teams will split their bonus points among team members
+
+
+Note: Check out the [Kaggle notebooks](https://www.kaggle.com/docs/notebooks) which let you make submissions directly from the notebook. Its very similar to using Rivanna's OnDemand in that you can make a RMarkdown/Jupyter notebook or R/Python scrips that run on the cloud. Free CPU (4 cores, 16GB RAM) - amazing! Let your laptops cool off after all their hard work this semester. 
+
+#### Data Read In
+```{r, message=FALSE}
+train <- read_csv('.\\house-prices-advanced-regression-techniques\\train.csv') # 1460
+test <- read_csv('.\\house-prices-advanced-regression-techniques\\test.csv') # Id start with 1461
+test$SalePrice <- 1
+data <- bind_rows(train, test)
+rm(train, test)
+gc(verbose = F)
+```
+#### Feature Engineering
+```{r}
+# Handle Categorical Variables
+data <- data %>%
+  mutate_at(
+    vars(
+      MSSubClass,
+      MSZoning,
+      LotShape,
+      LandContour,
+      LotConfig,
+      LandSlope,
+      Neighborhood,
+      BldgType,
+      HouseStyle,
+      OverallQual,
+      OverallCond,
+      RoofStyle,
+      Exterior1st,
+      MasVnrType,
+      ExterQual,
+      Foundation,
+      BsmtQual,
+      BsmtExposure,
+      BsmtFinType1,
+      HeatingQC,
+      CentralAir,
+      FullBath,
+      BedroomAbvGr,
+      KitchenQual,
+      TotRmsAbvGrd,
+      Fireplaces,
+      FireplaceQu,
+      GarageType,
+      GarageFinish,
+      GarageCars,
+      Fence,
+      SaleType,
+      SaleCondition
+    ),
+    ~ as.factor(as.character(ifelse(is.na(.), "Not Found", .)))
+  ) %>% 
+  mutate(
+    LotArea = log(LotArea),
+    BsmtFinSF1 = log(BsmtFinSF1 + 1),
+    LotFrontage = ifelse(is.na(LotFrontage), mean(LotFrontage, na.rm = T), LotFrontage),
+    MasVnrArea = ifelse(is.na(MasVnrArea), 0, MasVnrArea),
+    SalePrice = log(SalePrice)
+  ) %>%
+  select(
+    -c(
+      Alley,
+      Street,
+      Utilities,
+      Condition2,
+      Condition1,
+      YearRemodAdd,
+      RoofMatl,
+      Exterior2nd,
+      BsmtCond,
+      BsmtFinType2,
+      BsmtFinSF2,
+      BsmtUnfSF,
+      Heating,
+      Electrical,
+      LowQualFinSF,
+      BsmtFullBath,
+      Functional,
+      KitchenAbvGr,
+      GarageYrBlt,
+      GarageQual,
+      GarageCond,
+      PavedDrive,
+      WoodDeckSF,
+      OpenPorchSF,
+      `3SsnPorch`,
+      EnclosedPorch,
+      PoolArea,
+      PoolQC,
+      MiscFeature,
+      MiscVal,
+      YrSold,
+      MoSold
+    )
+  )
+
+# One hot encoding
+dmy <- dummyVars(" ~ .", data = data)
+data <- data.frame(predict(dmy, newdata = data))
+
+train <- data %>% filter(Id <= 1460)
+test <- data %>% filter(Id > 1460)
+
+rm(data, dmy)
+gc()
+```
+
+#### Modeling
+I tried penalized linear model, random forest, XGBoost and ensemble model of all 3, but in the end, the random forest model from `h2o` package gives me the best RMSE.
+
+```{r h2o Random Forest, message=FALSE}
+random_forest <- function(train, test) {
+  
+  h2o.init(nthreads = -1, max_mem_size = '12G')
+  trainHex <- as.h2o(train)
+  features <- colnames(train)[!(colnames(train) %in% c("Id", "SalePrice"))]
+  ## Train a random forest using all default parameters
+  rfHex <- h2o.randomForest(
+    x = features,
+    y = "SalePrice",
+    ntrees = 200,
+    max_depth = 50,
+    nfolds = 5,
+    seed = 666,
+    mtries = 100,
+    verbose = F,
+    training_frame = trainHex
+  )
+  testHex <- as.h2o(test)
+  test$SalePrice <- as.vector(h2o.predict(rfHex, testHex))
+  submission <- test %>% 
+      select(Id, SalePrice) %>% 
+      mutate(SalePrice = exp(SalePrice))
+  h2o.shutdown(prompt = F)
+  
+  return(submission)
+}
+```
+
+#### Final Prediction
+```{r message=FALSE}
+final <- random_forest(train = train, test = test)
+write_csv(final, 'hw8_final.csv')
+```
+
+My Kaggle user name is "**Godlike_Coder**" and my final submission score is **0.14910**. 

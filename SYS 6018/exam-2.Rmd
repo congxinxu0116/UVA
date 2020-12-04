@@ -1,0 +1,585 @@
+---
+title: "Exam II"
+author: "**Congxin (David) Xu**"
+date: "Due: Mon Nov 30 | 10:00pm"
+output: 
+  html_document:
+  # html_notebook:  
+    df_print: default  # set default format for table output
+---
+
+
+**SYS 6018 | Fall 2020 | University of Virginia **
+
+*******************************************
+
+<!--- Below are global settings for knitr. You can override any of them by adding the changes to individual chunks --->
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(error=FALSE,       # Keep compiling upon error
+                      collapse=FALSE,    # collapse by default
+                      echo=TRUE,         # echo code by default
+                      comment = "#>",    # change comment character
+                      fig.width = 5,     # set figure width
+                      fig.align = "center",# set figure position
+                      out.width = "49%", # set width of displayed images
+                      warning=TRUE,      # show R warnings
+                      message=FALSE)     # show R messages
+options(dplyr.summarise.inform = FALSE)  # show message about group structure
+
+```
+
+<!--- Solution Region --->
+```{css solution-region, echo=FALSE}
+.solution {
+  background-color: #232D4B10;
+  border-style: solid;
+  border-color: #232D4B;
+  padding: .5em;
+  margin: 20px
+}
+```
+
+
+<!--- Load Required R packages here --->
+```{r packages, include=FALSE}
+#- Better table printing
+library(kableExtra) # https://haozhu233.github.io/kableExtra/awesome_table_in_html.html
+format_table <- function(x, nmax=10) {
+  kable(x) %>% 
+    kable_styling(full_width = FALSE, font_size=11, position = "left") %>% 
+    {if(nrow(x) > nmax) scroll_box(., width = "100%", height = "200px") else .}
+}
+#- useful functions
+digits <- function(x, k=2) format(round(x, k), nsmall=k)
+#- data directory
+data.dir = 'https://mdporter.github.io/SYS6018/data/'
+#- required functions
+library(ks)
+library(tidyverse)
+library(glmnet)
+library(arules)
+library(igraph)
+```
+
+<div style="background-color:yellow; color:red; display: block; border-color: black; padding:1em">
+**The exam and solutions are only for the private use of the students of SYS-6018 Fall 2020. Sharing of the exam questions or solutions, posting on the internet, selling to a company, or possession by anyone else at the University of Virginia constitutes a violation of the honor policy.**
+</div>
+
+<div style="background-color:lightgrey; display: block; border-color: black; padding:1em">
+
+- You may **not** discuss this exam with anyone else (besides teaching staff). All work must be done independently. You may consult textbooks, online material, etc. but any outside resource must be cited.
+    - Add an informal reference (e.g., url, book title) to any source consulted for each problem. 
+    - You may reuse code from my class materials/homework solutions, just make a note that you did so. 
+        - E.g., the function `apriori2df()` will make it easier to work with the output from the `arules::apriori()` function.    
+
+- Unless otherwise noted, all referenced datasets will be found at directory `https://https://mdporter.github.io/SYS6018/data`. In R, the path to these files can be obtained by
+```{r, eval=FALSE}
+data.dir = 'https://mdporter.github.io/SYS6018/data'
+file.path(data.dir, "filename.ext")
+```
+
+</div>
+
+
+
+
+### Problem 1 (15 pts): A Market Basket of Marvel heroes
+
+In HW 10.1, we analyzed the Marvel Universe using networks. This problem will use concepts from Association Analysis to explore the data. 
+Use the dataset `marvel_association.csv`, which gives the heroes that appeared in each comic, to answer the following questions. Treat the heroes as the *items* and comics as the *transactions*.
+
+
+a. Provide the following descriptive analysis of the data: the number of items (heroes), number of transactions (comics), and a visual representation of the distribution of *the number of items per transaction*. 
+
+<div class="solution">
+```{r Problem 1 a, message=FALSE}
+# Read in the data
+marvel <- read_csv("https://mdporter.github.io/SYS6018/data/marvel_association.csv")
+
+# Number of items (heros)
+print(nrow(marvel %>% select(hero) %>% distinct()))
+
+# Number of transactions (comics)
+print(nrow(marvel %>% select(comic) %>% distinct()))
+
+# Distribution of the number of items per transaction
+ggplot(data = marvel %>% 
+         group_by(comic) %>% 
+         summarize(num_of_items_per_trans = n()),
+       aes(num_of_items_per_trans)) + 
+  geom_histogram() +
+  xlab('Number of items per transaction')
+```
+
+Within the `marvel_association.csv` dataset, there are 6431 unique items (heroes) and 12849 unique transactions (comics).
+
+</div>   
+
+
+
+b. What is the *lift* of the itemset: {CAPTAIN AMERICA, SPIDER-MAN}? What does the lift imply about the association of CAPTAIN AMERICA and SPIDER-MAN? 
+
+<div class="solution">
+
+We know that $$ \text{Lift}(I, J) = \frac{\text{Support}(I, J)}{\text{Support}(I)\text{Support}(J)} = \frac{\text{Count}(I, J)}{\text{Count}(I)\text{Count}(J) / N}$$
+
+```{r Problem 1 b}
+# Count the number of occurrence for two heroes
+count_I <- length(which(marvel$hero == 'CAPTAIN AMERICA'))
+count_J <- length(which(marvel$hero == 'SPIDER-MAN'))
+
+# Count the number of co-occurrence for two heroes
+count_IJ <- marvel %>% 
+  filter(hero %in% c('CAPTAIN AMERICA', 'SPIDER-MAN')) %>% 
+  group_by(comic) %>% 
+  summarize(count = n()) %>% 
+  filter(count > 1) %>% 
+  nrow()
+  
+# Calculate the lift
+print(count_IJ / (count_I * count_J / nrow(marvel %>% select(comic) %>% distinct())))
+```
+Based on the calculation above, we see that the lift for the itemset 
+{CAPTAIN AMERICA, SPIDER-MAN} is $0.8480223$, which is less than 1. this imply a **negative** association of CAPTAIN AMERICA and SPIDER-MAN.
+</div>   
+
+
+c. The [Fantastic Four](https://en.wikipedia.org/wiki/Fantastic_Four) comprises the heroes: MR. FANTASTIC, THING, INVISIBLE WOMAN, and HUMAN TORCH. If a comic includes the Fantastic Four, which other hero is most likely to be in the comic? What is the estimated probability?
+
+
+<div class="solution">
+```{r Problem 1 c}
+# Build the transaction class
+# split(items, transactions)
+marvelList <- split(marvel$hero, marvel$comic)
+trans <- as(marvelList, "transactions")
+# summary(trans)
+
+# Use the apriori function from arules package to find the most frequent hero 
+#   that will show up in the same comic with Fantastic Four
+fis2 <- apriori(trans,  
+                parameter = list(support = .01,
+                                 minlen = 5,
+                                 maxlen = 5,
+                                 target = "frequent"),
+                appearance = list(lhs = c("MR. FANTASTIC",
+                                          "THING",
+                                          "INVISIBLE WOMAN",
+                                          "HUMAN TORCH")))
+
+#-----------------------------------------------------------------------#
+#-- apriori2df(): convert output from apriori() to a tibble/dataframe
+#-- Author: Prof. Michael Porter
+#-- Filename: instacart.R
+#-----------------------------------------------------------------------#
+
+#-- Convert apriori object to data frame / tibble
+# use this instead of inspect(), which only prints to screen
+apriori2df <- function(x){
+  if(class(x) == "itemsets"){
+    out = data.frame(items=arules::labels(x), x@quality, stringsAsFactors = FALSE)
+  }
+  else if(class(x) == "rules"){
+    out = data.frame(
+      lhs = arules::labels(lhs(x)),
+      rhs = arules::labels(rhs(x)),
+      x@quality, 
+      stringsAsFactors = FALSE)
+  }
+  else stop("Only works with class of itemsets or rules")
+  if(require(tibble)) as_tibble(out) else out
+}
+
+# Use the apriori2df function to convert the model output to a data frame
+apriori2df(fis2) %>%
+  mutate(lift = interestMeasure(fis2, measure = "lift", trans)) %>%
+  arrange(-support) %>% 
+  select(items, support) %>%
+  head(1)
+```
+If a comic includes the Fantastic Four, **RICHARDS, FRANKLIN B** is most likely to be in the comic as well. The estimated probability is $0.01416453$.
+
+</div>   
+
+
+<!-- -------------------------------------------------------------------- -->
+
+### Problem 2 (15 pts): Hero Clustering
+
+Consider two *binary* vectors $A \in \{0, 1\}^p$ and $B \in \{0, 1\}^p$
+
+- E.g. $A=[0,1,1,1]$, $B = [1,0,1,0]$ for $p=4$. 
+
+The dissimilarity, or distance, between two binary vectors can often be created from the following three measures: 
+
+- $N_A$ represents the total number of 1's in A. In example, $N_A = 3$. 
+- $N_B$ represents the total number of 1's in B. In example, $N_B = 2$. 
+- $N_{AB}$ represents the total number of positions where where A and B both have a value of 1. In example, $N_{AB} = 1$ (due to the 3rd position/element of the vectors)
+
+
+a. Write out the equations for [*cosine distance*](https://en.wikipedia.org/wiki/Cosine_similarity), [*Jaccard's distance*](https://en.wikipedia.org/wiki/Jaccard_index), and [*Squared Euclidean distance*](https://en.wikipedia.org/wiki/Euclidean_distance#Squared_Euclidean_distance) using **only** $N_{AB}, N_A, N_B$. 
+    - Note: use 1-similarity to convert a similarity scores to a *distance*. 
+
+
+<div class="solution">
+$$\text{cosine distance} = 1 - \text{cosine similarity} = 1 - \frac{N_{AB}}{\sqrt{N_A \times N_B}}$$
+$$\text{Jaccard's distance} = 1 - \frac{N_{AB}}{N_A + N_B - N_{AB}}$$
+$$\text{Squared Euclidean distance} = N_A + N_B - 2N_{AB}$$
+</div>   
+
+
+
+b. The Marvel heroes INVISIBLE WOMAN and THING appeared in $668$ comics together. Use the data from Problem 1 to calculate the three *distances* between INVISIBLE WOMAN and THING. 
+    - The vectors represent the presence or absence of the heroes in each comic
+
+<div class="solution">
+```{r Problem 2 b}
+vec <- marvel %>% 
+  select(comic) %>% 
+  distinct() %>% 
+  left_join(marvel %>% 
+               filter(hero == 'INVISIBLE WOMAN') %>%
+               mutate(INVISIBLE_WOMAN = 1) %>% 
+               select(comic, INVISIBLE_WOMAN), 
+             by = 'comic') %>% 
+  left_join(marvel %>% 
+               filter(hero == 'THING') %>%
+               mutate(THING = 1) %>% 
+               select(comic, THING), 
+             by = 'comic') %>% 
+  mutate(INVISIBLE_WOMAN = replace_na(INVISIBLE_WOMAN, 0),
+         THING = replace_na(THING, 0)) %>% 
+  mutate(both = ifelse(INVISIBLE_WOMAN + THING == 2, 1, 0))
+
+# Check common comic == 668
+# vec %>% 
+#   filter(INVISIBLE_WOMAN == 1 & THING == 1) %>% 
+#   nrow() # 668
+
+# Calculate Cosine distance 
+print(1 - sum(vec$both) / (sqrt(sum(vec$INVISIBLE_WOMAN) * sum(vec$THING))))
+
+# Calculate Jaccard's distance
+print(1 - sum(vec$both) /
+        (sum(vec$INVISIBLE_WOMAN) + sum(vec$THING) - sum(vec$both)))
+
+# Calculate Squared Euclidean distance
+print(sum(vec$INVISIBLE_WOMAN) + sum(vec$THING) - 2 * sum(vec$both))
+```
+
+</div>   
+
+
+c. The dendrogram below is constructed by running hierarchical clustering using *Jaccard's Distance* and *Single Linkage* on the 30 most frequent heroes. Describe the first 3 merges. Who gets merged, at what (approximate) height are they merged, and how single linkage is used to calculate the height.
+
+
+```{r, echo=FALSE, out.width="80%", fig.align='center'}
+knitr::include_graphics("https://mdporter.github.io/SYS6018/other/jaccards-single.png")
+```
+
+
+<div class="solution">
+The first merge happens at height approximately 0.28, where **MR. FANTASTIC** and **INVISIBLE WOMAN**. The second merge is at height approximately 0.31, where **HUMAN TORCH** is merged with the previous two heroes in the first merge. The third merge happens at height around 0.36, where **THING** is merged with previous three heros in the second merge. Now, we have found all 4 members of Fantastic Four! 
+
+
+Single linkage method is measuring the cluster dissimilarity by calculating the smallest dissimilarity between pairs in the two sets. Here we uses Jaccard's Distance as the distance metrics, so the height of the first merge will be the Jaccard's Distance between *MR. FANTASTIC* and *INVISIBLE WOMAN*. The height of the second merge will be the **minimum** of the Jaccard's Distance between *HUMAN TORCH* and *MR. FANTASTIC* and the Jaccard's Distance between *HUMAN TORCH* and *INVISIBLE WOMAN*. The height of the third merge will be the **minimum** of the Jaccard's Distance between *THING* and *MR. FANTASTIC*, the Jaccard's Distance between *THING* and *INVISIBLE WOMAN* and the Jaccard's Distance between *THING* and *HUMAN TORCH*.
+
+</div>   
+
+
+d. The dendrogram below is constructed by running hierarchical clustering using *Cosine Distance* and *Complete Linkage* on the 30 most frequent heroes. How many clusters result if the dendrogram is cut at a height of 0.70? What is the largest possible Cosine Distance between THOR and SCARLET WITCH? 
+
+
+```{r, echo=FALSE, out.width="80%", fig.align='center'}
+knitr::include_graphics("https://mdporter.github.io/SYS6018/other/cosine-complete.png")
+```
+
+
+<div class="solution">
+If we cut the dendrogram at height 0.70, we will have **11** clusters. The largest possible Cosine Distance between THOR and SCARLET WITCH is about $0.75$, because the dendrogram is graphed using the Complete Linkage, which is using the largest dissimilarity between pairs. If SCARLET WITCH happens to be the point that is farthest from THOR, the Cosine Distance between them will be the height of the cluster that containing both of them. Therefore, the largest possible Cosine Distance between THOR and SCARLET WTICH is about $0.75$.  
+</div>   
+
+
+<!-- -------------------------------------------------------------------- -->
+
+### Problem 3 (15 pts): Predictive Density Estimation Contest
+
+In HW 5.2, you estimated the (space-time) density of highway crashes on I-64 in 2016 using Kernel Density Estimation (KDE). In this problem, you will re-estimate the density, using the method of your choice, with the goal of predicting the density of the crashes in 2017. 
+
+This will be a contest. You will submit your 2017 density estimates at a set of evaluation grid points and I will evaluate your predictions using the predictive log-likelihood ratio (or information gain) score:
+\[
+score = \sum_{i=1}^n \log \frac{\hat{f}(mile_i, time_i)}{p(mile_i, time_i)}
+\]
+where $\hat{f}(m, t)$ is your prediction for $(mile=m, time=t)$, 
+$p(m, t)$ is my predictions, and the sum is over the $n$ points in the 2017 test data. A positive score means that you did better than my predictions - you will receive a 2% bonus on your exam score! 
+
+a. Use the same data that was given in HW 5.2, `crashes16.csv`, to make your predictive density estimate. Make predictions at the grid points
+```{r}
+eval.pts = expand.grid(mile = seq(86.9, 136.1, by=.25), time = seq(0, 7, by=1/24))
+```
+- Show your code.
+- Note: I will normalize your density, $f_i'=f_i/\sum_j f_j$, so it sums to one (and effectively converts it to a discrete pmf). 
+
+
+<div class="solution">
+Function reference: https://cran.r-project.org/web/packages/ks/ks.pdf
+```{r Problem 3 a}
+# Read in the data
+data <- read_csv("https://mdporter.github.io/SYS6018/data/crashes16.csv")
+
+# Model 1: Least-squares cross-validation (LSCV) bandwidth matrix selector for multivariate data
+H1 <- Hlscv(data) 
+model_1 <- kde(data, H = H1, positive = T) 
+
+# Model 2: Normal mixture bandwidth
+H2 <- Hnm(data) 
+model_2 <- kde(data, H = H2, positive = T) 
+
+# Model 3: Normal scale bandwidth
+H3 <- Hns(data) 
+model_3 <- kde(data, H = H3, positive = T) 
+
+# Model 4: Plug-in bandwidth selector
+H4 <- Hpi(data) 
+model_4 <- kde(data, H = H4, positive = T) 
+
+# Model 5: Smoothed cross-validation (SCV) bandwidth selector
+H5 <- Hscv(data) 
+model_5 <- kde(data, H = H5, positive = T) 
+
+# Ensemble of 5 models
+eval.pts <- eval.pts %>% 
+  mutate(f1 = predict(model_1, x = eval.pts),
+         f2 = predict(model_2, x = eval.pts),
+         f3 = predict(model_2, x = eval.pts),
+         f4 = predict(model_2, x = eval.pts),
+         f5 = predict(model_2, x = eval.pts)) %>% 
+  group_by(mile, time) %>% 
+  summarize(f = (f1 + f2 + f3 + f4 + f5) / 5)
+
+head(eval.pts)
+```
+
+</div>   
+
+
+
+b. Create a .csv file named `lastname_firstname.csv` that includes the columns named *mile*, *time*, *f*, where *f* is your estimated density. Submit this file in Collab. 
+
+<div class="solution">
+```{r Problem 3 b}
+write_csv(eval.pts, 'xu_congxin.csv')
+```
+
+</div>   
+
+
+c. Describe the model you used. Make sure to mention why you chose your model, what the unknown parameters in your model are, and how those parameters were estimated. You may need to read the function documentation; I'm not looking for the full mathematical details but you do need to specify the method used. 
+    - You are free to use any model, even if we didn't cover it in class.
+
+<div class="solution">
+I used an Ensemble Model by averaging 5 individual KDE models. When I was reading through the documentation for the [`ks` packages](https://cran.r-project.org/web/packages/ks/ks.pdf), I realized that there are many ways to select the bandwidth for the KDE model. Since we do not know Prof. Porter's results, there is no way for me to validate my prediction against his. Therefore, I choose 5 different ways to generate the bandwidth matrix: "Least-squares cross-validation", "Normal mixture", "Normal scale", "Plug-in " and "Smoothed cross-validation". Then, I just use the `kde()` function from the `ks` package to train the model and make prediction on the `eval.pts` data frame. The last 4 methods generate very similar results, but the least squares cross-validation method gives very different prediction values. Hence, I decided to average 5 models and use that as my final prediction. 
+
+The unknown parameter in my 5 models are the same and it is the **estimated density for each mile x time**. I also restricted all models to generate positive density values by setting `positive = T` within the `kde()` function.
+</div>   
+
+
+<!-- -------------------------------------------------------------------- -->
+
+### Problem 4 (5 pts): Network Clustering 
+
+It was mentioned in class (or class notes) that *community detection* could be considered as a clustering of the nodes in a network. *Spectral clustering* is a clustering approach that uses the eigenvectors from the graph *Laplacian* as the features for clustering. In this exercise you will implement a version of spectral clustering. 
+
+The spectral clustering algorithm for $K$ clusters is as follows:  
+
+1. Find the eigenvectors associated with the $K$ *smallest* eigenvalues of the graph Laplacian $L$. 
+2. Run $k$-means clustering to find $K$ clusters using the $K$ eigenvectors as the features/variables. 
+
+Use the Laplacian $L = D-A$, where $D$ is the diagonal matrix with node degree along the diagonal and $A$ is the (unweighted) adjacency matrix. 
+
+Hint: the R function `eigen()` finds the eigenvalues and eigenvectors of a matrix. There will be one $0$ eigenvalue in this problem, but due to round-off error it will have a value on the order of $10^{-16}$.  
+
+a. The `UKfaculty` network found in the `igraphdata` R package is a social network of university faculty. The graph can be loaded into R with the command `data(UKfaculty, package='igraphdata')`. Calculate the graph Laplacian using an undirected and unweighted version of the graph. 
+    - Show the code used to produce $L$.
+
+
+<div class="solution">
+```{r Problem 4 a}
+# Read in data from package
+data(UKfaculty, package='igraphdata')
+
+# Convert the directed graph to an undirected graph
+UKfaculty <- as.undirected(UKfaculty)
+
+# Define D, matrix |V| x |V| where the diagonal is 
+#   the degree of the node and 0 everywhere else
+D <- diag(degree(UKfaculty)) 
+
+# Define A, adjacency matrix, |V| x |V|, where (i, j) = 1 if i and j 
+#   are connected and (i, j) = 0 if i and j are not connected
+A <- as_adj(UKfaculty, sparse = F)
+
+# Laplacian L = D - A
+L <- D - A
+```
+
+</div> 
+
+
+b. Implement spectral clustering of the `UKfaculty` network for $K=1,2,\ldots, 9$. 
+    - Show your code. 
+    - Plot the eigenvalues as a function of $K$
+    - Also plot the sum of squared errors (SSE) as a function of $K$
+
+<div class="solution">
+```{r Problem 4 b}
+# Control Randomness
+set.seed(666)
+
+# Calculate the eigenvalues and eigenvectors
+eig <- eigen(L)
+
+# Sort the eigenvalues ascending
+eig_value <- sort(eig$values)
+
+# Define the maximum number of clusters
+Kmax <- 9
+
+# Create a list to store the output
+output <- list()
+
+# Run the Kmeans for k from 1 to Kmax
+for (k in 1:Kmax) {
+  
+  # Collect the eigenvectors associated with the k smallest eigenvalues
+  vector <- eig$vectors[,which(eig$values %in% eig_value[1:k])]
+    
+  # Scale the features
+  vector <- scale(vector)
+  
+  # Build the Kmeans model using the vectors as features
+  km <- kmeans(vector, centers = k, nstart = 25)
+  
+  # Store the output
+  output[[k]] <- data.frame(k = k, 
+                            sse = km$tot.withinss,
+                            eig_value = eig_value[1:k])
+}
+
+# Convert list to data frame
+output <- bind_rows(output)
+
+# Plot the eigenvalues as a function of k
+ggplot(data = output) + 
+  geom_point(aes(x = k, y = eig_value))
+
+# plot the SSE as a function of k
+ggplot(data = output %>% select(k, sse) %>% distinct) + 
+  geom_line(aes(x = k, y = sse))
+```
+
+</div> 
+
+
+c. Estimate $K$. Explain why you chose that value of $K$. 
+
+<div class="solution">
+```{r Problem 4 c}
+# Control Randomness
+set.seed(666)
+
+# Define the maximum number of clusters
+Kmax <- 40
+
+# Create a list to store the output
+output <- list()
+
+# Run the Kmeans for k from 1 to Kmax
+for (k in 1:Kmax) {
+  # Collect the eigenvectors associated with the k smallest eigenvalues
+  vector <- eig$vectors[,which(eig$values %in% eig_value[1:k])]
+  
+  # Scale the features
+  vector <- scale(vector)
+  
+  # Build the Kmeans model using the vectors as features
+  km <- kmeans(vector, centers = k, nstart = 25)
+  
+  # Store the output
+  output[[k]] <- data.frame(k = k, 
+                            sse = km$tot.withinss,
+                            eig_value = eig_value[1:k])
+}
+
+# Convert list to data frame
+output <- bind_rows(output)
+
+# Plot the eigenvalues as a function of k
+# ggplot(data = output) + 
+#   geom_point(aes(x = k, y = eig_value))
+
+# plot the SSE as a function of k
+ggplot(data = output %>% select(k, sse) %>% distinct) + 
+  geom_line(aes(x = k, y = sse))
+```
+I re-ran the for loop I created in part b up to 40 clusters and I found that $K = 4$ gives the best SSE comparing to other K values.
+</div> 
+
+
+d. Using your chosen value of $K$, evaluate how well the resulting clustering can distinguish between the school affiliation of the nodes. Use the vertex attribute `Group` (in the `UKfaculty` graph) as the true label and calculate how many nodes would be *misclassified* by the clustering. 
+    - Use majority class rule to determine how to classify each cluster
+
+<div class="solution">
+```{r Problem 4 d}
+# Control Randomness
+set.seed(666)
+
+# My model: 
+k = 4
+
+# Collect the eigenvectors associated with the k smallest eigenvalues
+vector <- eig$vectors[,which(eig$values %in% eig_value[1:k])]
+
+# Scale the features
+vector <- scale(vector)
+
+# Build the Kmeans model using the vectors as features
+km <- kmeans(vector, centers = k, nstart = 25)
+
+# Get cluster membership
+predict <- data.frame(node = 1:length(km$cluster), cluster = km$cluster)
+
+# Use Majority Class Rule to determine the cluster number
+#   Cluster 1 will have the largest number of nodes,
+#   Cluster 2 will have the second largest number of nodes, etc.
+new_predict <- predict %>%
+  group_by(cluster) %>%
+  summarize(count = n()) %>%
+  arrange(-count) %>% 
+  mutate(new_cluster = seq(1:k)) %>% 
+  select(cluster, new_cluster) %>% 
+  right_join(predict,  by = "cluster") %>% 
+  select(node, new_cluster) %>% 
+  arrange(node)
+
+# Actual
+actual <- vertex_attr(UKfaculty)$Group
+
+# Create a Confusion Matrix
+conf <- table(actual, predict = new_predict$new_cluster)
+print(conf)
+
+# Total number of misclassified nodes 
+sum(conf) - sum(diag(conf))
+```
+
+Base on the Confusion Matrix above, we can see that out of the 81 nodes, there are 47 misclassified nodes.
+
+</div> 
+
+
+
+
+
+
+

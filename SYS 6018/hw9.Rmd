@@ -1,0 +1,317 @@
+---
+title: 'Homework #9'
+---
+
+#### Congxin (David) Xu
+#### Computing ID: cx2rx
+
+**SYS 6018 | Fall 2020 | University of Virginia **
+
+*******************************************
+
+<!--- Below are global settings for knitr. You can override any of them by adding the changes to individual chunks --->
+
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(error=TRUE,        # Keep compiling upon error
+                      collapse=FALSE,    # collapse by default
+                      echo=TRUE,         # echo code by default
+                      comment = "#>",    # change comment character
+                      fig.width = 5,     # set figure width
+                      fig.align = "center",# set figure position
+                      out.width = "49%", # set width of displayed images
+                      warning=TRUE,      # show R warnings
+                      message=TRUE)      # show R messages
+options(dplyr.summarise.inform = FALSE)  # ignore message about group structure
+```
+
+<!--- Solution Region --->
+```{css solution-region, echo=FALSE}
+.solution {
+  background-color: #232D4B10;
+  border-style: solid;
+  border-color: #232D4B;
+  padding: .5em;
+  margin: 20px
+}
+```
+
+
+<!--- Load Required R packages here --->
+```{r packages, include=FALSE}
+#- Better table printing
+library(kableExtra) # https://haozhu233.github.io/kableExtra/awesome_table_in_html.html
+format_table <- function(x, nmax=10, ...) {
+  kable(x, ...) %>% 
+    kable_styling(full_width = FALSE, font_size=11, position = "left") %>% 
+    {if(nrow(x) > nmax) scroll_box(., width = "100%", height = "300px") else .}
+}
+#- useful functions
+digits <- function(x, k=2) format(round(x, k), nsmall=k)
+#- data directory
+data.dir = 'https://mdporter.github.io/SYS6018/data/'
+#- required functions here
+library(arules)
+library(tidyverse)
+library(readxl)
+library(arulesViz)
+
+#-----------------------------------------------------------------------#
+#-- apriori2df(): convert output from apriori() to a tibble/dataframe
+#-----------------------------------------------------------------------#
+
+#-- Convert apriori object to data frame / tibble
+# use this instead of inspect(), which only prints to screen
+apriori2df <- function(x){
+  if(class(x) == "itemsets"){
+    out = data.frame(items=arules::labels(x), x@quality, stringsAsFactors = FALSE)
+  }
+  else if(class(x) == "rules"){
+    out = data.frame(
+      lhs = arules::labels(lhs(x)),
+      rhs = arules::labels(rhs(x)),
+      x@quality, 
+      stringsAsFactors = FALSE)
+  }
+  else stop("Only works with class of itemsets or rules")
+  if(require(tibble)) as_tibble(out) else out
+}
+```
+
+
+### Problem 9.1: Interestingness 
+
+Suppose we have market basket data consisting of 100 transactions and 20 items. Assume the support for item {$a$} is 20%, support for item {$b$} is 85%, and support for itemset {$a,b$} is 15%. 
+
+
+a. What is the confidence of the rule {a} $\rightarrow$ {b}? 
+
+<div class="solution">
+
+$$C(a \rightarrow b) = \frac{S(a, b)}{S(a)} = \frac{0.15}{0.2} = 0.75$$
+
+</div>
+
+
+b. Will the apriori algorithm find this rule (interesting) if the confidence threshold (minconf) is $c=.60$ and the support threshold (minsup) is $s=.10$?  
+
+<div class="solution">
+
+From Part a, we know that $C(a \rightarrow b) = 0.75 > 0.60$. In addition, $S(a \rightarrow b) = S(a, b) = 0.15 > 0.1$. Therefore, apriori algorithm will find this rule interesting because the confidence of this association passes the confidence threshold and the support of this association passes the support threshold.
+
+</div>
+
+
+c. Find the *lift* of this rule. 
+
+<div class="solution">
+
+$$L(a \rightarrow b) = \frac{C(a \rightarrow b)}{S(b)} = \frac{0.75}{0.85} = 0.8824$$
+
+</div>
+
+
+
+d. Find the *addedValue* of this rule. 
+
+<div class="solution">
+
+$$AV(a \rightarrow b) = C(a \rightarrow b) - S(b) = 0.75 - 0.85 = \text{-}0.1$$
+</div>
+
+
+e. Find the *leverage/PS* of this rule. 
+
+<div class="solution">
+
+$$PS(a, b) = S(a, b) - S(a)S(b) = 0.15 - 0.2 \times 0.85 = \text{-}0.02$$
+</div>
+
+
+
+f. Describe the nature of the relationship between items {a} and {b} according to *lift*, *addedValue* and *leverage/PS*. What observation can you draw from parts (b) and (c-e)? 
+
+<div class="solution">
+
+- Since the value of lift is less than 1, it indicates a negative association between items {a} and {b}. 
+- Since the value of Added Value is negative, it indicates that the probability of item {b} showing up in the basket given item {a} is present is lower than the unconditional probability of item {b} present in the basket. It suggests a negative association between item {a} and {b}.
+- Given the negative leverage value, we know that the observed item {a} and {b} appearing together is less than expected. Therefore, the leverage is suggesting that item {a} and {b} have a negative association. 
+
+From part b and (c-e), we can conclude that there is indeed an interesting association rule between item {a} and {b}, and the direction of that association is negative based on lift, added value and leverage. 
+
+</div>
+
+
+g. Let $p(a)$, $p(b)$, and $p(a,b)$ be the actual probabilities of observing items {a}, {b}, and {a,b} respectively in a transaction. What is the expected confidence rule {a} $\rightarrow$ {b} if a and b are independent? 
+
+<div class="solution">
+
+Given a and b are independent, $P(a, b) = P(a) P(b)$. Therefore, 
+
+$$C(a \rightarrow b) = \frac{P(a, b)}{P(a)} = \frac{P(a) P(b)}{P(a) } = P(b)$$
+The expected confidence rule should be $P(b)$.
+
+</div>
+
+
+
+### Problem 9.2: Online Retail
+
+The website <http://archive.ics.uci.edu/ml/datasets/online+retail> describes some transactional data from an online retailer. 
+
+
+a. Download the [excel file](http://archive.ics.uci.edu/ml/machine-learning-databases/00352/Online%20Retail.xlsx) to your machine and read it into R. 
+
+
+```{r, echo=FALSE, eval=FALSE}
+## HINT: use readxl::read_excel() for reading excel files
+library(readxl)
+data.dir = <"path/to/datadir">
+X = read_excel(file.path(data.dir, "Online Retail.xlsx"))
+```
+
+<div class="solution">
+
+```{r 9.2 a Read Excel}
+data <- read_excel("C:\\David\\UVA\\02 Fall 2020\\SYS 6018\\Homework\\Online Retail.xlsx")
+```
+
+
+</div>
+
+
+b. There are many quality problems with this dataset, but we will only address two of them. Remove all of the rows with missing Description values (NAs) and remove any duplicate items in a single transaction. Print the first 10 rows of the resulting data. 
+
+<div class="solution">
+
+```{r 9.2 b Data Cleaning}
+data <- data %>% 
+  filter(!is.na(Description)) %>% 
+  distinct(InvoiceNo, Description, .keep_all = TRUE)
+head(data, 10L)
+```
+
+
+</div>
+
+
+c. Find the number of transactions and number of items using *InvoiceNo* for transactions and *Description* as items (i.e., ignore the *StockCode* column).
+
+<div class="solution">
+
+```{r 9.2 c}
+K <- length(unique(data$InvoiceNo))
+N <- length(unique(data$Description))
+```
+
+The number of transactions is 24446 and the number of items is 4211.
+
+</div>
+
+
+d. Convert the data frame into a *transaction list* and convert it into a *transactions object* (don't forget to load the `arules` package). Print a summary (using `summary()`) of the new object. 
+
+<div class="solution">
+
+```{r 9.2 d}
+tList <- split(data$Description,data$InvoiceNo)
+trans <- as(tList, "transactions")
+summary(trans)
+```
+
+</div>
+
+
+e. Find the items with the highest support. Print and plot the support of the top 10. 
+
+<div class="solution">
+
+```{r}
+# Calculate Support for each item
+itemFreq <- count(data, Description, sort=TRUE) %>% mutate(support=n/K)
+
+# Item with highest support
+head(itemFreq, 1)
+```
+The item with the highest support is **WHITE HANGING HEART T-LIGHT HOLDER**. 
+
+```{r}
+# Print and plot the support of the top 10 items
+itemFreq %>% slice(1:10) %>% 
+  ggplot(aes(fct_reorder(Description, n), support)) + # order bars by n
+  geom_col() +         # barplot
+  coord_flip() +       # rotate plot 90 deg
+  theme(axis.title.y = element_blank())
+```
+
+
+</div>
+
+
+f. Find the *frequent itemsets* that contain at least 3 items and have $s \geq 0.02$. Add the *lift* metric. Show the top 10 results, ordered by *lift*. 
+
+<div class="solution">
+
+```{r}
+fis2 <-
+  apriori(trans, parameter = list(
+    support = .02,
+    minlen = 3,
+    target = "frequent"
+  ))
+apriori2df(fis2) %>%
+  mutate(lift = interestMeasure(fis2, measure = "lift", trans)) %>%
+  arrange(-lift) %>%
+  head(10)
+```
+
+
+</div>
+
+
+g. Find all of the *association rules* with $s \geq 0.02$, $c \geq 0.70$. Add the *PS/leverage* and *addedValue* metrics. Show all results, ordered by *addedValue*
+
+<div class="solution">
+
+```{r}
+rules <- apriori(trans,
+                parameter = list(
+                  support = .02,
+                  confidence = .70,
+                  minlen = 2,
+                  target = "rules"
+                ))
+
+apriori2df(rules) %>%
+  mutate(
+    addedValue = interestMeasure(rules, measure = "addedValue", trans),
+    PS = interestMeasure(rules, measure = "leverage", trans)
+  ) %>%
+  arrange(-addedValue)
+```
+
+</div>
+
+
+h. Find one rule that you think is interesting. Write the rule and explain why you find it interesting. 
+
+<div class="solution">
+
+One interesting rule I found is the association between {PINK REGENCY TEACUP AND SAUCER} and	{GREEN REGENCY TEACUP AND SAUCER}. Its life is greater than 1 with positive addedValue and PS/leverage, which means that it is a positive association. I found this rule interesting because tea lovers seem to find a green tea cup matches very well with a red tea cup as a set.
+
+
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

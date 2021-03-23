@@ -2,3 +2,9 @@
 *.png
 *.env
 DS 5559/hashtag_output.csv
+*.csv
+DS 5559/.ipynb_checkpoints/jupyter_nb_basics-checkpoint.ipynb
+DS 5559/.ipynb_checkpoints/Twitter Data Collection Copy-checkpoint.ipynb
+DS 5559/.ipynb_checkpoints/Twitter Data Collection-checkpoint.ipynb
+DS 5559/.ipynb_checkpoints/Twitter Data Collection-checkpoint.ipynb
+DS 5559/.ipynb_checkpoints/Twitter Data Collection-checkpoint.ipynb
